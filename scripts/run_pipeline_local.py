@@ -204,7 +204,16 @@ def main():
         help="Date for historical replay (YYYY-MM-DD). If omitted, runs in live mode.",
         default=None,
     )
+    parser.add_argument(
+        "--out",
+        dest="out",
+        help="Output JSON file path (default: web/data/latest.json)",
+        default=None,
+    )
     args = parser.parse_args()
+    if args.out:
+        global WEB_DATA_PATH
+        WEB_DATA_PATH = os.path.abspath(args.out)
     run_pipeline(args.as_of)
 
 
