@@ -1,0 +1,190 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Saans (साँस) — Stubble Fire Early Warning System Serverless Architecture.
+  Environmental Hacks Hackathon — Track: Air.
+
+Parameters:
+  FirmsMapKey:
+    Type: String
+    NoEcho: true
+    Description: NASA FIRMS Map Key for satellite active fire detections
+  Stage:
+    Type: String
+    Default: prod
+    Description: Deployment stage environment name
+  Mode:
+    Type: String
+    Default: live
+    AllowedValues:
+      - live
+      - replay
+    Description: Telemetry ingestion mode (live satellite NRT or historical replay)
+  ReplayDate:
+    Type: String
+    Default: '2024-11-01'
+    Description: Historical peak burning date for replay mode (YYYY-MM-DD)
+
+Globals:
+  Function:
+    Timeout: 120
+    MemorySize: 512
+    Runtime: python3.12
+    Tracing: Active
+    Environment:
+      Variables:
+        STAGE: !Ref Stage
+        FIRMS_MAP_KEY: !Ref FirmsMapKey
+        MODE: !Ref Mode
+        REPLAY_DATE: !Ref ReplayDate
+        S3_BUCKET_NAME: !Ref HistoryBucket
+        TABLE_RISK_CELLS: !Ref RiskCellsTable
+        TABLE_CITY_SMOKE: !Ref CitySmokeTable
+        TABLE_META: !Ref MetaTable
+
+Resources:
+  ##############################################################################
+  # S3 Bucket for Climatology Index
+  ##############################################################################
+  HistoryBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "saans-history-${AWS::AccountId}-${Stage}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+
+  ##############################################################################
+  # DynamoDB Tables (On-Demand / Pay-Per-Request Billing)
+  ##############################################################################
+  RiskCellsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "saans-risk-cells-${Stage}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: cell_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: cell_id
+          KeyType: HASH
+
+  CitySmokeTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "saans-city-smoke-${Stage}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: city
+          AttributeType: S
+      KeySchema:
+        - AttributeName: city
+          KeyType: HASH
+
+  MetaTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "saans-meta-${Stage}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: key
+          AttributeType: S
+      KeySchema:
+        - AttributeName: key
+          KeyType: HASH
+
+  ##############################################################################
+  # API Gateway v2 (HTTP API with CORS)
+  ##############################################################################
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Name: !Sub "saans-http-api-${Stage}"
+      CorsConfiguration:
+        AllowOrigins:
+          - '*'
+        AllowMethods:
+          - GET
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+        MaxAge: 3600
+
+  ##############################################################################
+  # API Function
+  ##############################################################################
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "saans-api-${Stage}"
+      CodeUri: ../
+      Handler: backend.api.handler.handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref RiskCellsTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref CitySmokeTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref MetaTable
+      Events:
+        HealthRoute:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /health
+            Method: GET
+        RiskRoute:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /risk
+            Method: GET
+        SmokeRoute:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /smoke
+            Method: GET
+
+  ##############################################################################
+  # Ingest Function & EventBridge Scheduled Rule (Every 3 hours)
+  ##############################################################################
+  IngestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "saans-ingest-${Stage}"
+      CodeUri: ../
+      Handler: backend.ingest.handler.handler
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref HistoryBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref RiskCellsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CitySmokeTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MetaTable
+      Events:
+        ScheduledIngest:
+          Type: Schedule
+          Properties:
+            Schedule: rate(3 hours)
+            Name: !Sub "saans-ingest-schedule-${Stage}"
+            Description: Trigger satellite stubble fire ingestion and risk scoring every 3 hours
+            Enabled: true
+
+Outputs:
+  HttpApiUrl:
+    Description: Base public URL for Saans HTTP API
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+  HistoryBucketName:
+    Description: Name of S3 bucket for uploading history_cells.json
+    Value: !Ref HistoryBucket
+  IngestFunctionName:
+    Description: Name of Ingest Lambda function for manual trigger
+    Value: !Ref IngestFunction
