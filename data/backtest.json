@@ -1,0 +1,374 @@
+{
+  "test_days_count": 22,
+  "methods": {
+    "saans_combined": {
+      "name": "Saans Heuristic (History + 48h Neighborhood)",
+      "mean_precision_at_50": 0.3773,
+      "mean_recall_at_50": 0.3704
+    },
+    "yesterdays_fires": {
+      "name": "Yesterday's Fires (24h Persistence Baseline)",
+      "mean_precision_at_50": 0.2464,
+      "mean_recall_at_50": 0.2388
+    },
+    "history_only": {
+      "name": "History Climatology Only (W_RECENT=0)",
+      "mean_precision_at_50": 0.4127,
+      "mean_recall_at_50": 0.4077
+    }
+  },
+  "details": [
+    {
+      "date": "2024-10-20",
+      "ground_truth_cells": 26,
+      "saans": {
+        "precision@50": 0.22,
+        "recall@50": 0.423
+      },
+      "yesterdays_fires": {
+        "precision@50": 0.08,
+        "recall@50": 0.154
+      },
+      "history_only": {
+        "precision@50": 0.2,
+        "recall@50": 0.385
+      }
+    },
+    {
+      "date": "2024-10-23",
+      "ground_truth_cells": 45,
+      "saans": {
+        "precision@50": 0.24,
+        "recall@50": 0.267
+      },
+      "yesterdays_fires": {
+        "precision@50": 0.08,
+        "recall@50": 0.089
+      },
+      "history_only": {
+        "precision@50": 0.34,
+        "recall@50": 0.378
+      }
+    },
+    {
+      "date": "2024-10-26",
+      "ground_truth_cells": 62,
+      "saans": {
+        "precision@50": 0.56,
+        "recall@50": 0.452
+      },
+      "yesterdays_fires": {
+        "precision@50": 0.24,
+        "recall@50": 0.194
+      },
+      "history_only": {
+        "precision@50": 0.58,
+        "recall@50": 0.468
+      }
+    },
+    {
+      "date": "2024-10-29",
+      "ground_truth_cells": 71,
+      "saans": {
+        "precision@50": 0.42,
+        "recall@50": 0.296
+      },
+      "yesterdays_fires": {
+        "precision@50": 0.4,
+        "recall@50": 0.282
+      },
+      "history_only": {
+        "precision@50": 0.52,
+        "recall@50": 0.366
+      }
+    },
+    {
+      "date": "2024-11-01",
+      "ground_truth_cells": 93,
+      "saans": {
+        "precision@50": 0.58,
+        "recall@50": 0.312
+      },
+      "yesterdays_fires": {
+        "precision@50": 0.34,
+        "recall@50": 0.183
+      },
+      "history_only": {
+        "precision@50": 0.62,
+        "recall@50": 0.333
+      }
+    },
+    {
+      "date": "2024-11-04",
+      "ground_truth_cells": 74,
+      "saans": {
+        "precision@50": 0.5,
+        "recall@50": 0.338
+      },
+      "yesterdays_fires": {
+        "precision@50": 0.44,
+        "recall@50": 0.297
+      },
+      "history_only": {
+        "precision@50": 0.52,
+        "recall@50": 0.351
+      }
+    },
+    {
+      "date": "2024-11-07",
+      "ground_truth_cells": 58,
+      "saans": {
+        "precision@50": 0.52,
+        "recall@50": 0.448
+      },
+      "yesterdays_fires": {
+        "precision@50": 0.32,
+        "recall@50": 0.276
+      },
+      "history_only": {
+        "precision@50": 0.52,
+        "recall@50": 0.448
+      }
+    },
+    {
+      "date": "2024-11-10",
+      "ground_truth_cells": 52,
+      "saans": {
+        "precision@50": 0.38,
+        "recall@50": 0.365
+      },
+      "yesterdays_fires": {
+        "precision@50": 0.22,
+        "recall@50": 0.212
+      },
+      "history_only": {
+        "precision@50": 0.42,
+        "recall@50": 0.404
+      }
+    },
+    {
+      "date": "2024-11-13",
+      "ground_truth_cells": 32,
+      "saans": {
+        "precision@50": 0.22,
+        "recall@50": 0.344
+      },
+      "yesterdays_fires": {
+        "precision@50": 0.22,
+        "recall@50": 0.344
+      },
+      "history_only": {
+        "precision@50": 0.3,
+        "recall@50": 0.469
+      }
+    },
+    {
+      "date": "2024-11-16",
+      "ground_truth_cells": 25,
+      "saans": {
+        "precision@50": 0.2,
+        "recall@50": 0.4
+      },
+      "yesterdays_fires": {
+        "precision@50": 0.14,
+        "recall@50": 0.28
+      },
+      "history_only": {
+        "precision@50": 0.28,
+        "recall@50": 0.56
+      }
+    },
+    {
+      "date": "2024-11-19",
+      "ground_truth_cells": 21,
+      "saans": {
+        "precision@50": 0.14,
+        "recall@50": 0.333
+      },
+      "yesterdays_fires": {
+        "precision@50": 0.1,
+        "recall@50": 0.238
+      },
+      "history_only": {
+        "precision@50": 0.16,
+        "recall@50": 0.381
+      }
+    },
+    {
+      "date": "2025-10-20",
+      "ground_truth_cells": 32,
+      "saans": {
+        "precision@50": 0.22,
+        "recall@50": 0.344
+      },
+      "yesterdays_fires": {
+        "precision@50": 0.14,
+        "recall@50": 0.219
+      },
+      "history_only": {
+        "precision@50": 0.3,
+        "recall@50": 0.469
+      }
+    },
+    {
+      "date": "2025-10-23",
+      "ground_truth_cells": 40,
+      "saans": {
+        "precision@50": 0.32,
+        "recall@50": 0.4
+      },
+      "yesterdays_fires": {
+        "precision@50": 0.2,
+        "recall@50": 0.25
+      },
+      "history_only": {
+        "precision@50": 0.4,
+        "recall@50": 0.5
+      }
+    },
+    {
+      "date": "2025-10-26",
+      "ground_truth_cells": 51,
+      "saans": {
+        "precision@50": 0.46,
+        "recall@50": 0.451
+      },
+      "yesterdays_fires": {
+        "precision@50": 0.36,
+        "recall@50": 0.353
+      },
+      "history_only": {
+        "precision@50": 0.42,
+        "recall@50": 0.412
+      }
+    },
+    {
+      "date": "2025-10-29",
+      "ground_truth_cells": 82,
+      "saans": {
+        "precision@50": 0.56,
+        "recall@50": 0.341
+      },
+      "yesterdays_fires": {
+        "precision@50": 0.4,
+        "recall@50": 0.244
+      },
+      "history_only": {
+        "precision@50": 0.62,
+        "recall@50": 0.378
+      }
+    },
+    {
+      "date": "2025-11-01",
+      "ground_truth_cells": 75,
+      "saans": {
+        "precision@50": 0.52,
+        "recall@50": 0.347
+      },
+      "yesterdays_fires": {
+        "precision@50": 0.24,
+        "recall@50": 0.16
+      },
+      "history_only": {
+        "precision@50": 0.56,
+        "recall@50": 0.373
+      }
+    },
+    {
+      "date": "2025-11-04",
+      "ground_truth_cells": 76,
+      "saans": {
+        "precision@50": 0.62,
+        "recall@50": 0.408
+      },
+      "yesterdays_fires": {
+        "precision@50": 0.36,
+        "recall@50": 0.237
+      },
+      "history_only": {
+        "precision@50": 0.6,
+        "recall@50": 0.395
+      }
+    },
+    {
+      "date": "2025-11-07",
+      "ground_truth_cells": 77,
+      "saans": {
+        "precision@50": 0.52,
+        "recall@50": 0.338
+      },
+      "yesterdays_fires": {
+        "precision@50": 0.38,
+        "recall@50": 0.247
+      },
+      "history_only": {
+        "precision@50": 0.56,
+        "recall@50": 0.364
+      }
+    },
+    {
+      "date": "2025-11-10",
+      "ground_truth_cells": 53,
+      "saans": {
+        "precision@50": 0.4,
+        "recall@50": 0.377
+      },
+      "yesterdays_fires": {
+        "precision@50": 0.24,
+        "recall@50": 0.226
+      },
+      "history_only": {
+        "precision@50": 0.42,
+        "recall@50": 0.396
+      }
+    },
+    {
+      "date": "2025-11-13",
+      "ground_truth_cells": 56,
+      "saans": {
+        "precision@50": 0.3,
+        "recall@50": 0.268
+      },
+      "yesterdays_fires": {
+        "precision@50": 0.26,
+        "recall@50": 0.232
+      },
+      "history_only": {
+        "precision@50": 0.38,
+        "recall@50": 0.339
+      }
+    },
+    {
+      "date": "2025-11-16",
+      "ground_truth_cells": 33,
+      "saans": {
+        "precision@50": 0.24,
+        "recall@50": 0.364
+      },
+      "yesterdays_fires": {
+        "precision@50": 0.18,
+        "recall@50": 0.273
+      },
+      "history_only": {
+        "precision@50": 0.22,
+        "recall@50": 0.333
+      }
+    },
+    {
+      "date": "2025-11-19",
+      "ground_truth_cells": 15,
+      "saans": {
+        "precision@50": 0.16,
+        "recall@50": 0.533
+      },
+      "yesterdays_fires": {
+        "precision@50": 0.08,
+        "recall@50": 0.267
+      },
+      "history_only": {
+        "precision@50": 0.14,
+        "recall@50": 0.467
+      }
+    }
+  ]
+}
