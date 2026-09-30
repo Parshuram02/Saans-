@@ -6,6 +6,9 @@
 // Global configuration: API_BASE can be overridden by deployment or left blank for local JSON fallback
 const API_BASE = window.API_BASE || "";
 
+// Carto Maps API key for authenticated dark basemap tiles
+const CARTO_API_KEY = "cb1_45g4_1_c1c32825df893b0075fc601b";
+
 // Punjab + Haryana focus coordinates
 const DEFAULT_MAP_CENTER = [30.15, 76.0];
 const DEFAULT_MAP_ZOOM = 7;
@@ -39,11 +42,16 @@ function initMap() {
   });
 
   // Dark matter basemap for satellite data contrast
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: "abcd",
-    maxZoom: 18,
-  }).addTo(map);
+  L.tileLayer(
+    `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?api_key=${CARTO_API_KEY}`,
+    {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: "abcd",
+      maxZoom: 20,
+      errorTileUrl: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", // fallback without key on tile error
+    }
+  ).addTo(map);
 
   // Initialize Layer Groups
   riskCellsLayer = L.layerGroup().addTo(map);
