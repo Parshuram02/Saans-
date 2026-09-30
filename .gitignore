@@ -1,0 +1,28 @@
+# Secrets and environment
+.env
+.env.local
+*.env
+
+# Data files (keep samples/JSON index, ignore raw CSV dumps)
+data/*.csv
+data/history_raw*.csv
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# AWS SAM build artifacts
+.aws-sam/
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# OS specific
+.DS_Store
+Thumbs.db
