@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from backend.shared.clients import fetch_fires, fetch_wind
 from core.config import CITIES, FIRMS_SOURCE_NRT, FIRMS_SOURCE_SP
+from core.geo import is_in_punjab_haryana
 from core.risk import compute_risk
 from core.smoke import estimate_smoke
 
@@ -69,10 +70,14 @@ def get_replay_fires(as_of_str: str) -> list[dict]:
             for row in reader:
                 if row.get("acq_date") in target_dates:
                     try:
+                        lat = float(row["latitude"])
+                        lon = float(row["longitude"])
+                        if not is_in_punjab_haryana(lat, lon):
+                            continue
                         fires.append(
                             {
-                                "latitude": float(row["latitude"]),
-                                "longitude": float(row["longitude"]),
+                                "latitude": lat,
+                                "longitude": lon,
                                 "acq_date": row["acq_date"],
                                 "acq_time": row.get("acq_time", ""),
                                 "confidence": row.get("confidence", "n"),

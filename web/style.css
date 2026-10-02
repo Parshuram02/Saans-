@@ -781,6 +781,128 @@ body {
   white-space: nowrap;
 }
 
+/* 2-Hour Milestone Jump Pills Row */
+.timeline-step-pills-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.step-pills-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  white-space: nowrap;
+}
+
+.step-pills-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.btn-step-pill {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-step-pill:hover {
+  background: rgba(0, 240, 255, 0.15);
+  color: #00f0ff;
+  border-color: rgba(0, 240, 255, 0.4);
+}
+
+.btn-step-pill.active {
+  background: #00f0ff;
+  color: #0b1120;
+  border-color: #00f0ff;
+  font-weight: 800;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+}
+
+/* Live Forecast Status Banner */
+.timeline-status-banner {
+  background: rgba(6, 182, 212, 0.12);
+  border: 1px solid rgba(6, 182, 212, 0.28);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: #a5f3fc;
+}
+
+.pulse-indicator-live {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00f0ff;
+  box-shadow: 0 0 8px #00f0ff;
+  animation: pulse-dot 1.2s infinite ease-in-out;
+  flex-shrink: 0;
+}
+
+/* Animated Smoke Flow Vector & Milestones */
+.leaflet-interactive.animated-trajectory-line {
+  stroke-dasharray: 10, 10;
+  animation: smoke-flow-dash 1.5s linear infinite;
+}
+
+@keyframes smoke-flow-dash {
+  from {
+    stroke-dashoffset: 20;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.trajectory-step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 6px;
+  background: rgba(10, 15, 29, 0.94);
+  border: 1.5px solid #00f0ff;
+  border-radius: 10px;
+  color: #00f0ff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+  pointer-events: none;
+  user-select: none;
+}
+
+.trajectory-wavefront-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ff6b4a 0%, #ef4444 80%);
+  border: 2px solid #ffffff;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 900;
+  box-shadow: 0 0 16px #ff6b4a, 0 0 30px rgba(255, 107, 74, 0.8);
+  animation: pulse-pin 1.2s infinite ease-in-out;
+  pointer-events: none;
+}
+
 @keyframes pulse-pin {
   0% {
     transform: scale(1);

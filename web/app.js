@@ -33,7 +33,7 @@ let minFrpFilter = 0;
 let minRiskFilter = 0;
 
 let currentData = null;
-let activeCityName = "Delhi";
+let activeCityName = "Central Delhi (Connaught Place)";
 
 // Initialize on DOM ready
 document.addEventListener("DOMContentLoaded", () => {
@@ -207,6 +207,16 @@ function setupEventListeners() {
       updateTimeline(h);
     });
   }
+
+  // 2-Hour Interval Step Pills Click Listeners
+  const stepPills = document.querySelectorAll(".btn-step-pill");
+  stepPills.forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      const h = parseInt(e.target.dataset.hour || "0");
+      if (timeSlider) timeSlider.value = h;
+      updateTimeline(h);
+    });
+  });
 
   // Task 2: Play/Pause Timeline Animation Button
   const btnPlay = document.getElementById("btn-play-timeline");
@@ -524,11 +534,12 @@ function selectCity(cityName) {
   const cityData = currentData.cities.find((c) => c.city === cityName);
   if (!cityData) return;
 
+  renderCities(currentData.cities);
   drawTrajectories(cityData);
 }
 
 /**
- * Render 0.1° Risk Grid Rectangles with hover highlights
+ * Render 0.1° Risk Grid Rectangles with subtle glass styling
  */
 function renderRiskCells(cells) {
   riskCellsLayer.clearLayers();
@@ -543,21 +554,21 @@ function renderRiskCells(cells) {
 
     const bounds = [[south, west], [north, east]];
     const color = getRiskColor(c.risk);
-    const opacity = Math.min(0.65, 0.2 + (c.risk / 100.0) * 0.45);
+    const opacity = Math.min(0.55, 0.15 + (c.risk / 100.0) * 0.4);
 
     const rect = L.rectangle(bounds, {
       color: color,
-      weight: 1,
+      weight: 0.6,
       fillColor: color,
       fillOpacity: opacity,
     });
 
     rect.on("mouseover", function () {
-      this.setStyle({ weight: 2.5, color: "#ffffff", fillOpacity: Math.min(0.85, opacity + 0.25) });
+      this.setStyle({ weight: 2, color: "#ffffff", fillOpacity: Math.min(0.8, opacity + 0.25) });
     });
 
     rect.on("mouseout", function () {
-      this.setStyle({ weight: 1, color: color, fillOpacity: opacity });
+      this.setStyle({ weight: 0.6, color: color, fillOpacity: opacity });
     });
 
     rect.bindTooltip(
@@ -598,23 +609,23 @@ function renderFires(fires) {
 
   fires.forEach((f) => {
     const frp = f.frp || 10.0;
-    const radius = Math.min(12, Math.max(4, Math.sqrt(frp) * 1.3));
+    const radius = Math.min(10, Math.max(3.5, Math.sqrt(frp) * 1.1));
 
     const circle = L.circleMarker([f.lat, f.lon], {
       radius: radius,
       fillColor: "#ff4500",
       color: "#ffffff",
-      weight: 1.5,
+      weight: 1.2,
       opacity: 0.95,
       fillOpacity: 0.85,
     });
 
     circle.on("mouseover", function () {
-      this.setStyle({ weight: 3, color: "#ffff00", fillOpacity: 1.0 });
+      this.setStyle({ weight: 2.5, color: "#ffff00", fillOpacity: 1.0 });
     });
 
     circle.on("mouseout", function () {
-      this.setStyle({ weight: 1.5, color: "#ffffff", fillOpacity: 0.85 });
+      this.setStyle({ weight: 1.2, color: "#ffffff", fillOpacity: 0.85 });
     });
 
     circle.bindTooltip(
@@ -634,49 +645,61 @@ function renderFires(fires) {
 }
 
 /**
- * Render Target City Markers
+ * Render Target City Markers (Clean, non-overlapping design)
  */
 function renderCities(cities) {
   citiesLayer.clearLayers();
 
-  const cityCoords = {
-    Delhi: [28.6139, 77.2090],
-    Ludhiana: [30.9010, 75.8573],
-    Chandigarh: [30.7333, 76.7794],
-  };
-
   cities.forEach((c) => {
-    const pos = cityCoords[c.city];
-    if (!pos) return;
+    const pos = [c.lat || 28.6139, c.lon || 77.2090];
+    if (!pos[0] || !pos[1]) return;
 
-    const iconHtml = `
-      <div style="
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        background: rgba(10, 15, 29, 0.92);
-        border: 2px solid #06b6d4;
-        border-radius: 20px;
-        padding: 4px 12px;
-        color: #fff;
-        font-size: 0.82rem;
-        font-weight: 700;
-        box-shadow: 0 0 16px rgba(6, 182, 212, 0.7);
-        cursor: pointer;
-        white-space: nowrap;
-      ">
-        <span style="width: 9px; height: 9px; border-radius: 50%; background: #06b6d4;"></span>
-        ${c.city}
-      </div>
-    `;
+    const isSelected = (c.city === activeCityName);
+
+    const iconHtml = isSelected
+      ? `
+        <div style="
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background: rgba(10, 15, 29, 0.96);
+          border: 2px solid #00f0ff;
+          border-radius: 20px;
+          padding: 3px 10px;
+          color: #fff;
+          font-size: 0.78rem;
+          font-weight: 800;
+          box-shadow: 0 0 16px rgba(0, 240, 255, 0.8);
+          cursor: pointer;
+          white-space: nowrap;
+        ">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: #00f0ff;"></span>
+          ${c.city}
+        </div>
+      `
+      : `
+        <div style="
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          background: rgba(10, 15, 29, 0.9);
+          border: 2px solid #06b6d4;
+          box-shadow: 0 0 8px rgba(6, 182, 212, 0.8);
+          cursor: pointer;
+        "></div>
+      `;
 
     const customIcon = L.divIcon({
       html: iconHtml,
       className: "custom-city-pin",
-      iconAnchor: [35, 12],
+      iconAnchor: isSelected ? [35, 12] : [6, 6],
     });
 
     const marker = L.marker(pos, { icon: customIcon });
+    marker.bindTooltip(
+      `<strong>📍 ${c.city}</strong><br>Threat Level: ${c.level} &bull; Arrival ETA: ~${c.eta_hours !== null ? c.eta_hours + "h" : "N/A"}`,
+      { sticky: true }
+    );
     marker.on("click", () => {
       selectCity(c.city);
     });
@@ -716,34 +739,37 @@ function getWindFlowInfo(fromDeg) {
 function drawTrajectories(cityData) {
   trajectoriesLayer.clearLayers();
 
-  const cityCoords = {
-    Delhi: [28.6139, 77.2090],
-    Ludhiana: [30.9010, 75.8573],
-    Chandigarh: [30.7333, 76.7794],
-  };
-
-  const cPos = cityCoords[cityData.city];
-  if (!cPos || !cityData.top_sources || cityData.top_sources.length === 0) {
+  const cPos = [cityData.lat || 28.6139, cityData.lon || 77.2090];
+  if (!cPos[0] || !cPos[1] || !cityData.top_sources || cityData.top_sources.length === 0) {
     return;
   }
 
-  cityData.top_sources.forEach((src, idx) => {
-    const sPos = [src.lat, src.lon];
+  const windSpeed = (cityData.wind && cityData.wind.speed_kmh) ? Math.max(3.0, cityData.wind.speed_kmh) : 10.0;
 
+  // Show top 3 most impactful plumes to keep the map clean and readable
+  const displaySources = cityData.top_sources.slice(0, 3);
+
+  displaySources.forEach((src, idx) => {
+    const sPos = [src.lat, src.lon];
+    const distKm = src.distance_km || haversineKm(src.lat, src.lon, cPos[0], cPos[1]);
+    const clusterEta = distKm / windSpeed;
+
+    // Primary vector is thick and glowing; secondary vectors are lighter
+    const isPrimary = (idx === 0);
     const line = L.polyline([sPos, cPos], {
-      color: "#00f0ff",
-      weight: Math.max(2.5, 4.5 - idx * 0.5),
-      opacity: 0.9,
-      dashArray: "8, 8",
+      color: isPrimary ? "#00f0ff" : "rgba(6, 182, 212, 0.6)",
+      weight: isPrimary ? 3.5 : 2.0,
+      opacity: isPrimary ? 0.95 : 0.65,
+      className: "animated-trajectory-line",
+      dashArray: isPrimary ? "12, 8" : "6, 6",
     });
 
     line.bindTooltip(
       `
-      <div style="font-size: 0.83rem; padding: 3px;">
-        <strong style="color:#00f0ff;">💨 Smoke Transport Vector #${idx + 1} to ${cityData.city}</strong><br>
-        Source Cluster: ${src.lat.toFixed(2)}°N, ${src.lon.toFixed(2)}°E<br>
-        Distance: <strong>${src.distance_km.toFixed(1)} km</strong><br>
-        FRP Energy: <strong>${src.frp.toFixed(1)} MW</strong> (${src.fires} fires)
+      <div style="font-size: 0.83rem; padding: 4px;">
+        <strong style="color:#00f0ff;">💨 Upwind Smoke Plume #${idx + 1} ➔ ${cityData.city}</strong><br>
+        Source: ${src.lat.toFixed(2)}°N, ${src.lon.toFixed(2)}°E &bull; FRP: <strong>${src.frp.toFixed(1)} MW</strong><br>
+        Total Distance: <strong>${distKm.toFixed(0)} km</strong> &bull; Total ETA: <strong>~${Math.round(clusterEta)} hours</strong>
       </div>
       `,
       { sticky: true }
@@ -760,26 +786,55 @@ function drawTrajectories(cityData) {
       html: `
         <div style="
           transform: rotate(${flowAngle - 90}deg);
-          color: #00f0ff;
-          font-size: 1.3rem;
+          color: ${isPrimary ? '#00f0ff' : 'rgba(6, 182, 212, 0.7)'};
+          font-size: 1.1rem;
           font-weight: 900;
           line-height: 1;
-          filter: drop-shadow(0 0 6px #00f0ff);
+          filter: drop-shadow(0 0 4px #00f0ff);
           user-select: none;
         ">➔</div>
       `,
       className: "vector-flow-arrow-pin",
-      iconSize: [20, 20],
-      iconAnchor: [10, 10],
+      iconSize: [16, 16],
+      iconAnchor: [8, 8],
     });
 
     const arrowMarker = L.marker([midLat, midLon], { icon: arrowIcon, interactive: false });
     trajectoriesLayer.addLayer(arrowMarker);
+
+    // Single Clean Advancing Wavefront Marker for the Primary Plume
+    if (isPrimary && currentHourIndex > 0) {
+      const progFrac = Math.min(1.0, (currentHourIndex * windSpeed) / distKm);
+      const wLat = src.lat + progFrac * (cPos[0] - src.lat);
+      const wLon = src.lon + progFrac * (cPos[1] - src.lon);
+      const remDistNow = Math.max(0, Math.round(distKm - currentHourIndex * windSpeed));
+      const isArrived = progFrac >= 0.98;
+
+      const waveIcon = L.divIcon({
+        html: `
+          <div class="trajectory-wavefront-badge" title="Smoke front at T+${currentHourIndex}h">
+            ${isArrived ? "🚨" : `+${currentHourIndex}h`}
+          </div>
+        `,
+        className: "wavefront-pin",
+        iconSize: [26, 26],
+        iconAnchor: [13, 13],
+      });
+
+      const waveMarker = L.marker([wLat, wLon], { icon: waveIcon });
+      waveMarker.bindTooltip(
+        isArrived
+          ? `🚨 <strong>SMOKE IMPACT AT T+${currentHourIndex}h:</strong> Plume has arrived at ${cityData.city}!`
+          : `🔥 <strong>Smoke Front at T+${currentHourIndex}h:</strong> ${remDistNow} km from ${cityData.city} (${Math.max(0, Math.round(clusterEta - currentHourIndex))}h remaining)`,
+        { sticky: true }
+      );
+      trajectoriesLayer.addLayer(waveMarker);
+    }
   });
 
-  // Fit bounds to show city and its sources
-  const allPoints = [cPos, ...cityData.top_sources.map((s) => [s.lat, s.lon])];
-  map.flyToBounds(allPoints, { padding: [60, 60], maxZoom: 8, duration: 1.0 });
+  // Fit bounds cleanly with comfortable padding
+  const allPoints = [cPos, ...displaySources.map((s) => [s.lat, s.lon])];
+  map.flyToBounds(allPoints, { padding: [70, 70], maxZoom: 8, duration: 0.8 });
 }
 
 /* ==========================================================================
@@ -787,6 +842,42 @@ function drawTrajectories(cityData) {
    ========================================================================== */
 
 const EARTH_RADIUS_KM = 6371.0;
+
+// Boundary polygon strictly enclosing Indian Punjab and Haryana
+const PUNJAB_HARYANA_POLYGON = [
+  [32.50, 75.60], [32.30, 75.95], [31.40, 76.60], [30.90, 77.10],
+  [30.35, 77.60], [29.70, 77.30], [28.95, 77.30], [28.35, 77.60],
+  [27.65, 77.35], [27.65, 75.95], [28.25, 75.80], [28.95, 75.40],
+  [29.50, 74.45], [30.00, 73.85], [30.60, 74.15], [31.10, 74.55],
+  [31.65, 74.80], [32.05, 75.00], [32.50, 75.60]
+];
+
+function isInPunjabHaryana(lat, lon) {
+  const poly = PUNJAB_HARYANA_POLYGON;
+  let inside = false;
+  const n = poly.length;
+  let p1x = poly[0][1], p1y = poly[0][0];
+
+  for (let i = 1; i <= n; i++) {
+    const p2x = poly[i % n][1], p2y = poly[i % n][0];
+    if (lat > Math.min(p1y, p2y)) {
+      if (lat <= Math.max(p1y, p2y)) {
+        if (lon <= Math.max(p1x, p2x)) {
+          let xinters = lon;
+          if (p1y !== p2y) {
+            xinters = (lat - p1y) * (p2x - p1x) / (p2y - p1y) + p1x;
+          }
+          if (p1x === p2x || lon <= xinters) {
+            inside = !inside;
+          }
+        }
+      }
+    }
+    p1x = p2x;
+    p1y = p2y;
+  }
+  return inside;
+}
 
 function haversineKm(lat1, lon1, lat2, lon2) {
   const phi1 = (lat1 * Math.PI) / 180;
@@ -847,39 +938,37 @@ function analyzeCustomLocation(lat, lng, hourIdx = currentHourIndex, townName = 
 
   if (!currentData || !currentData.fires) return;
 
-  // Filter fires by min FRP threshold
+  // Filter fires by min FRP threshold and strictly inside Punjab/Haryana
   const activeFires = (currentData.fires || []).filter(
-    (f) => (f.frp || 0) >= minFrpFilter
+    (f) => (f.frp || 0) >= minFrpFilter && isInPunjabHaryana(parseFloat(f.lat), parseFloat(f.lon))
   );
 
   // Resolve surface wind from closest monitoring city
   let windSpeedNow = 10.0;
   let windFromNow = 300.0;
 
-  const cityCoordsMap = {
-    Delhi: [28.6139, 77.2090],
-    Ludhiana: [30.9010, 75.8573],
-    Chandigarh: [30.7333, 76.7794],
-  };
-
   if (currentData.cities && currentData.cities.length > 0) {
     let minCityDist = Infinity;
     let closestCity = currentData.cities[0];
 
     currentData.cities.forEach((c) => {
-      const coords = cityCoordsMap[c.city];
-      if (coords) {
-        const d = haversineKm(lat, lng, coords[0], coords[1]);
-        if (d < minCityDist) {
-          minCityDist = d;
-          closestCity = c;
-        }
+      const cLat = c.lat || 28.6139;
+      const cLon = c.lon || 77.2090;
+      const d = haversineKm(lat, lng, cLat, cLon);
+      if (d < minCityDist) {
+        minCityDist = d;
+        closestCity = c;
       }
     });
 
     if (closestCity && closestCity.wind) {
-      windSpeedNow = closestCity.wind.speed_kmh || 10.0;
-      windFromNow = closestCity.wind.from_deg || 300.0;
+      if (hourIdx > 0 && closestCity.wind.speed_kmh_hourly && closestCity.wind.speed_kmh_hourly[hourIdx] !== undefined) {
+        windSpeedNow = closestCity.wind.speed_kmh_hourly[hourIdx];
+        windFromNow = closestCity.wind.dir_from_deg_hourly[hourIdx];
+      } else {
+        windSpeedNow = closestCity.wind.speed_kmh || 10.0;
+        windFromNow = closestCity.wind.from_deg || 300.0;
+      }
     }
   }
 
@@ -1056,9 +1145,21 @@ function updateTimeline(hourIdx) {
     display.textContent = hourIdx === 0 ? "Now (+0h)" : `+${hourIdx}h Forecast`;
   }
 
+  // Update active class on 2h step pills
+  const stepPills = document.querySelectorAll(".btn-step-pill");
+  stepPills.forEach((btn) => {
+    const btnH = parseInt(btn.dataset.hour || "0");
+    if (btnH === hourIdx) {
+      btn.classList.add("active");
+    } else {
+      btn.classList.remove("active");
+    }
+  });
+
   // Update trajectories for active city
+  let activeCityData = null;
   if (currentData && currentData.cities) {
-    const activeCityData = currentData.cities.find((c) => c.city === activeCityName);
+    activeCityData = currentData.cities.find((c) => c.city === activeCityName) || currentData.cities[0];
     if (activeCityData) {
       drawTrajectories(activeCityData);
     }
@@ -1067,6 +1168,32 @@ function updateTimeline(hourIdx) {
   // Re-analyze custom location for hourIdx if active
   if (customLocationData) {
     analyzeCustomLocation(customLocationData.lat, customLocationData.lng, hourIdx, customLocationData.name);
+  }
+
+  // Update Live Forecast Status Banner
+  const statusTextEl = document.getElementById("timeline-status-text");
+  if (statusTextEl) {
+    const targetName = customLocationData ? (customLocationData.name || "Custom Pin") : (activeCityData ? activeCityData.city : "Delhi");
+    const cityW = activeCityData && activeCityData.wind ? activeCityData.wind : null;
+    const speedH = (cityW && cityW.speed_kmh_hourly && cityW.speed_kmh_hourly[hourIdx] !== undefined)
+      ? cityW.speed_kmh_hourly[hourIdx]
+      : (cityW ? cityW.speed_kmh : 11.0);
+    const dirH = (cityW && cityW.dir_from_deg_hourly && cityW.dir_from_deg_hourly[hourIdx] !== undefined)
+      ? cityW.dir_from_deg_hourly[hourIdx]
+      : (cityW ? cityW.from_deg : 275.0);
+    const windInfo = getWindFlowInfo(dirH);
+
+    const etaVal = activeCityData ? activeCityData.eta_hours : 14;
+    const isArrived = (etaVal !== null && hourIdx >= etaVal);
+
+    if (hourIdx === 0) {
+      statusTextEl.innerHTML = `<strong>T+0h Current State:</strong> Upwind stubble smoke traveling at <strong>${speedH.toFixed(1)} km/h</strong> from ${windInfo.fromCardinal} (${windInfo.fromDeg}°). Arrival predicted in <strong>~${etaVal}h</strong> for ${targetName}.`;
+    } else if (isArrived) {
+      statusTextEl.innerHTML = `🚨 <strong style="color:#ff6b4a;">T+${hourIdx}h Active Impact:</strong> Smoke plume wavefront has reached <strong>${targetName}</strong>! Heavy haze accumulation underway.`;
+    } else {
+      const remainingH = Math.max(0, etaVal - hourIdx);
+      statusTextEl.innerHTML = `⏱️ <strong>T+${hourIdx}h Projection:</strong> Smoke advancing at <strong>${speedH.toFixed(1)} km/h</strong> (${windInfo.shortLabel}). Front is ~${remainingH * Math.round(speedH)} km away (${remainingH}h until impact on ${targetName}).`;
+    }
   }
 }
 

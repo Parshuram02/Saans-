@@ -208,6 +208,8 @@ def estimate_smoke(
 
     return {
         "city": city_name,
+        "lat": city_lat,
+        "lon": city_lon,
         "level": level,
         "eta_hours": eta_hours,
         "upwind_fire_count": total_upwind_fires,

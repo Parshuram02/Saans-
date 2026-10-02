@@ -15,8 +15,10 @@ from datetime import datetime, timedelta
 
 try:
     from core.config import BBOX, KEEP_CONFIDENCE
+    from core.geo import is_in_punjab_haryana
 except ImportError:
     from config import BBOX, KEEP_CONFIDENCE
+    from geo import is_in_punjab_haryana
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +132,11 @@ def fetch_fires(
         try:
             lat = float(std_row["latitude"])
             lon = float(std_row["longitude"])
+
+            # Filter fires strictly to Indian Punjab and Haryana boundaries
+            if not is_in_punjab_haryana(lat, lon):
+                continue
+
             frp_raw = std_row.get("frp", "0")
             frp = float(frp_raw) if frp_raw else 0.0
             acq_date = std_row.get("acq_date", "")

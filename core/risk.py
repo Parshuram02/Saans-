@@ -7,7 +7,7 @@ from datetime import date, datetime
 from typing import Any
 
 from core.config import W_HISTORY, W_RECENT
-from core.geo import cell_center, cell_id, neighbors
+from core.geo import cell_center, cell_id, is_in_punjab_haryana, neighbors
 
 
 def parse_date(d: str | date | datetime) -> date:
@@ -135,6 +135,9 @@ def compute_risk(
 
         if risk_rounded > 0:
             c_lat, c_lon = cell_center(cid)
+            if not is_in_punjab_haryana(c_lat, c_lon):
+                continue
+
             result[cid] = {
                 "lat": c_lat,
                 "lon": c_lon,

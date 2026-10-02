@@ -11,11 +11,13 @@ BBOX = {
 # Grid cell resolution (~10 km grid)
 CELL_DEG = 0.1
 
-# Target monitoring cities
+# Target monitoring sectors across Delhi
 CITIES = {
     "Delhi": {"lat": 28.6139, "lon": 77.2090},
-    "Ludhiana": {"lat": 30.9010, "lon": 75.8573},
-    "Chandigarh": {"lat": 30.7333, "lon": 76.7794},
+    "North Delhi (Rohini)": {"lat": 28.7150, "lon": 77.1200},
+    "East Delhi (Anand Vihar)": {"lat": 28.6502, "lon": 77.3150},
+    "South Delhi (Saket)": {"lat": 28.5355, "lon": 77.2000},
+    "West Delhi (Dwarka)": {"lat": 28.5700, "lon": 77.0700},
 }
 
 # NASA FIRMS satellite sources

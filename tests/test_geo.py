@@ -3,12 +3,13 @@
 import pytest
 from core.config import CITIES, UPWIND_TOLERANCE_DEG
 from core.geo import (
-    haversine_km,
-    bearing_deg,
     angle_diff_deg,
-    is_upwind,
-    cell_id,
+    bearing_deg,
     cell_center,
+    cell_id,
+    haversine_km,
+    is_in_punjab_haryana,
+    is_upwind,
     neighbors,
 )
 
@@ -16,9 +17,20 @@ from core.geo import (
 def test_haversine_delhi_to_ludhiana():
     """Haversine Delhi to Ludhiana is about 280 km (accept 270 to 300)."""
     delhi = CITIES["Delhi"]
-    ludhiana = CITIES["Ludhiana"]
+    ludhiana = {"lat": 30.9010, "lon": 75.8573}
     dist = haversine_km(delhi["lat"], delhi["lon"], ludhiana["lat"], ludhiana["lon"])
     assert 270.0 <= dist <= 300.0, f"Expected 270-300 km, got {dist:.2f} km"
+
+
+def test_is_in_punjab_haryana_boundary():
+    """Points in Punjab/Haryana return True, while external points (Pakistan/Rajasthan) return False."""
+    assert is_in_punjab_haryana(31.63, 74.87) is True   # Amritsar
+    assert is_in_punjab_haryana(30.90, 75.85) is True   # Ludhiana
+    assert is_in_punjab_haryana(29.68, 76.99) is True   # Karnal
+    assert is_in_punjab_haryana(28.89, 76.60) is True   # Rohtak
+    assert is_in_punjab_haryana(31.52, 74.35) is False  # Lahore, Pakistan
+    assert is_in_punjab_haryana(32.16, 74.19) is False  # Gujranwala, Pakistan
+    assert is_in_punjab_haryana(26.91, 75.78) is False  # Jaipur, Rajasthan
 
 
 def test_angle_diff():

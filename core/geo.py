@@ -96,3 +96,52 @@ def neighbors(cid: str) -> list[str]:
                 continue
             res.append(f"{i + di}_{j + dj}")
     return res
+
+
+# Precision boundary polygon enclosing Indian Punjab, Haryana, Chandigarh, and Delhi border
+PUNJAB_HARYANA_POLYGON = [
+    (32.50, 75.60),  # Pathankot / Gurdaspur (NW)
+    (32.30, 75.95),  # Mukerian / Hoshiarpur
+    (31.40, 76.60),  # Anandpur Sahib / Ropar
+    (30.90, 77.10),  # Panchkula / Kalka
+    (30.35, 77.60),  # Yamunanagar (NE Haryana)
+    (29.70, 77.30),  # Karnal / Panipat (East border along Yamuna)
+    (28.95, 77.30),  # Sonipat
+    (28.35, 77.60),  # Faridabad / Palwal (SE Haryana)
+    (27.65, 77.35),  # Hodal / Mewat (South Haryana)
+    (27.65, 75.95),  # Narnaul / Mahendragarh (SW Haryana)
+    (28.25, 75.80),  # Rewari / Jhajjar border
+    (28.95, 75.40),  # Bhiwani
+    (29.50, 74.45),  # Sirsa (West Haryana)
+    (30.00, 73.85),  # Abohar / Fazilka (SW Punjab)
+    (30.60, 74.15),  # Fazilka / Firozpur border
+    (31.10, 74.55),  # Firozpur / Tarn Taran border
+    (31.65, 74.80),  # Amritsar (Attari border)
+    (32.05, 75.00),  # Dera Baba Nanak
+    (32.50, 75.60),  # Back to Pathankot
+]
+
+
+def is_in_punjab_haryana(lat: float, lon: float) -> bool:
+    """Check if coordinate is strictly located within Indian Punjab or Haryana state boundaries.
+
+    Uses standard ray-casting point-in-polygon algorithm.
+    """
+    poly = PUNJAB_HARYANA_POLYGON
+    n = len(poly)
+    inside = False
+    p1x, p1y = poly[0][1], poly[0][0]
+
+    for i in range(1, n + 1):
+        p2x, p2y = poly[i % n][1], poly[i % n][0]
+        if lat > min(p1y, p2y):
+            if lat <= max(p1y, p2y):
+                if lon <= max(p1x, p2x):
+                    if p1y != p2y:
+                        xinters = (lat - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+                    if p1x == p2x or lon <= xinters:
+                        inside = not inside
+        p1x, p1y = p2x, p2y
+
+    return inside
+

@@ -106,8 +106,8 @@
     <!-- City Smoke Threat Cards Grid -->
     <section class="cities-section" aria-label="Target city smoke warnings">
       <div class="section-title-row">
-        <h2>City Smoke Arrival Forecasts</h2>
-        <span class="section-hint">Click a city card to visualize its upwind smoke plume trajectories on the map</span>
+        <h2>Delhi Smoke Arrival Forecasts & Monitoring Sectors</h2>
+        <span class="section-hint">Click any Delhi sector to visualize upwind smoke plume trajectories from Punjab & Haryana</span>
       </div>
       <div class="city-cards-grid" id="city-cards-container">
         <!-- Rendered dynamically by app.js -->
@@ -182,18 +182,41 @@
           </div>
         </div>
 
-        <!-- 24-Hour Wind & Plume Forecast Timeline Bar (Task 2) -->
+        <!-- 24-Hour Wind & Plume Forecast Timeline Bar (Task 2 + 2h Interval Scrubbing) -->
         <div class="timeline-bar">
           <div class="timeline-inner">
-            <button id="btn-play-timeline" class="btn-play" type="button" title="Play 24-Hour Forecast Animation">▶ Play
-              Timeline</button>
+            <button id="btn-play-timeline" class="btn-play" type="button" title="Play 24-Hour Forecast Animation">▶ Play Timeline</button>
             <div class="timeline-slider-wrapper">
-              <span class="timeline-label">⏱️ 24h Wind & Plume Forecast Scrub:</span>
+              <span class="timeline-label">⏱️ Live Plume Progression:</span>
               <input type="range" id="time-slider" min="0" max="24" value="0" step="1" class="time-range-input">
               <span id="time-display" class="time-display-badge">Now (+0h)</span>
             </div>
             <button id="btn-clear-custom" class="btn-tool" type="button" style="display:none;"
               title="Clear Custom Location Marker">❌ Clear Custom Pin</button>
+          </div>
+
+          <!-- 2-Hour Milestone Jump Pills -->
+          <div class="timeline-step-pills-row">
+            <span class="step-pills-label">2h Wave Intervals:</span>
+            <div class="step-pills-group" id="step-pills-container">
+              <button class="btn-step-pill active" data-hour="0" type="button">Now (0h)</button>
+              <button class="btn-step-pill" data-hour="2" type="button">+2h</button>
+              <button class="btn-step-pill" data-hour="4" type="button">+4h</button>
+              <button class="btn-step-pill" data-hour="6" type="button">+6h</button>
+              <button class="btn-step-pill" data-hour="8" type="button">+8h</button>
+              <button class="btn-step-pill" data-hour="10" type="button">+10h</button>
+              <button class="btn-step-pill" data-hour="12" type="button">+12h</button>
+              <button class="btn-step-pill" data-hour="14" type="button">+14h</button>
+              <button class="btn-step-pill" data-hour="16" type="button">+16h</button>
+              <button class="btn-step-pill" data-hour="20" type="button">+20h</button>
+              <button class="btn-step-pill" data-hour="24" type="button">+24h</button>
+            </div>
+          </div>
+
+          <!-- Live Forecast Progression Status Banner -->
+          <div id="timeline-forecast-status" class="timeline-status-banner">
+            <span class="pulse-indicator-live"></span>
+            <span id="timeline-status-text"><strong>T+0h Current State:</strong> Upwind stubble smoke traveling at ~11 km/h towards Delhi sectors.</span>
           </div>
         </div>
 
@@ -374,7 +397,7 @@
   <!-- Leaflet JS from CDN -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script src="app.js?v=2"></script>
+  <script src="app.js?v=4"></script>
 </body>
 
 </html>
