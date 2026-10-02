@@ -17,6 +17,7 @@ try:
     from core.config import BBOX, KEEP_CONFIDENCE
     from core.geo import is_in_punjab_haryana
 except ImportError:
+    # pyrefly: ignore [missing-import]
     from config import BBOX, KEEP_CONFIDENCE
     from geo import is_in_punjab_haryana
 
