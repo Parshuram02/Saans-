@@ -45,8 +45,13 @@
 
       <div class="header-actions">
         <div class="mode-switcher" role="group" aria-label="Dataset Mode Switcher">
-          <button id="btn-mode-live" class="btn-cta active" type="button">Live Telemetry</button>
-          <button id="btn-mode-replay" class="btn-cta btn-outline" type="button">Peak Replay</button>
+          <button id="btn-mode-live" class="btn-cta active" type="button">Live Telemetry (03 Oct 2026)</button>
+          <button id="btn-mode-replay" class="btn-cta btn-outline" type="button">Peak Replay (01 Nov 2024)</button>
+        </div>
+
+        <div id="mode-badge" class="mode-badge live">
+          <span class="status-dot"></span>
+          <span id="mode-text">LIVE TELEMETRY • 03 OCT 2026</span>
         </div>
 
         <button class="mobile-toggle" id="mobile-toggle-btn" type="button" aria-label="Toggle Navigation" aria-expanded="false" aria-controls="mobile-nav-panel">
@@ -77,6 +82,7 @@
         <span class="banner-text">
           Risk score is a transparent heuristic estimate. Smoke arrival calculations utilize first-order surface wind vectors.
         </span>
+        <span id="last-updated" class="last-updated-tag"><strong>Live Stream:</strong> 03 Oct 2026, 06:30 AM IST</span>
       </div>
     </div>
   </header>

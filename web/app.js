@@ -405,13 +405,17 @@ async function loadData(sourceFile = "data/latest.json") {
     renderUI(payload);
   } catch (err) {
     console.error("Error loading early warning data:", err);
-    document.getElementById("mode-text").textContent = "Telemetry Offline";
-    document.getElementById("city-cards-container").innerHTML = `
-      <div style="grid-column: 1/-1; padding: 24px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; color: #fca5a5;">
-        <strong>Error loading data:</strong> ${err.message}.<br>
-        Ensure <code>scripts/run_pipeline_local.py</code> has been executed to generate <code>web/data/latest.json</code>.
-      </div>
-    `;
+    const modeText = document.getElementById("mode-text");
+    if (modeText) modeText.textContent = "Telemetry Offline";
+    const container = document.getElementById("city-cards-container");
+    if (container) {
+      container.innerHTML = `
+        <div style="grid-column: 1/-1; padding: 24px; background: #FEF2F2; border: 1px solid #FCA5A5; border-radius: 8px; color: #B91C1C;">
+          <strong>Error loading data:</strong> ${err.message}.<br>
+          Ensure dataset files exist in <code>web/data/</code>.
+        </div>
+      `;
+    }
   }
 }
 
@@ -440,14 +444,14 @@ function renderHeaderAndStats(data) {
   const lastUpdated = document.getElementById("last-updated");
 
   const mode = (data.mode || "live").toUpperCase();
-  modeBadge.className = `mode-badge ${data.mode || "live"}`;
+  if (modeBadge) modeBadge.className = `mode-badge ${data.mode || "live"}`;
 
   if (mode === "REPLAY") {
-    modeText.textContent = "PEAK REPLAY • 01 NOV 2024";
-    if (lastUpdated) lastUpdated.innerHTML = "<strong>Benchmark:</strong> 01 Nov 2024, 02:00 PM IST";
+    if (modeText) modeText.textContent = "PEAK REPLAY • 01 NOV 2024";
+    if (lastUpdated) lastUpdated.innerHTML = "<strong>Peak Episode Benchmark:</strong> 01 Nov 2024, 02:00 PM IST (Annual Peak Surge)";
   } else {
-    modeText.textContent = "LIVE TELEMETRY • 03 OCT 2026";
-    if (lastUpdated) lastUpdated.innerHTML = "<strong>Live Stream:</strong> 03 Oct 2026, 06:30 AM IST";
+    if (modeText) modeText.textContent = "LIVE TELEMETRY • 03 OCT 2026";
+    if (lastUpdated) lastUpdated.innerHTML = "<strong>Live Telemetry:</strong> 03 Oct 2026, 06:30 AM IST (Active Sync)";
   }
 
   const btnLive = document.getElementById("btn-mode-live");
@@ -455,19 +459,25 @@ function renderHeaderAndStats(data) {
   if (btnLive && btnReplay) {
     if (mode === "REPLAY") {
       btnReplay.classList.add("active");
+      btnReplay.classList.remove("btn-outline");
       btnLive.classList.remove("active");
+      btnLive.classList.add("btn-outline");
     } else {
       btnLive.classList.add("active");
+      btnLive.classList.remove("btn-outline");
       btnReplay.classList.remove("active");
+      btnReplay.classList.add("btn-outline");
     }
   }
 
   // Summary Metrics
   const fireCount = data.fires ? data.fires.length : 0;
-  document.getElementById("stat-fires-count").textContent = fireCount.toLocaleString();
+  const statFires = document.getElementById("stat-fires-count");
+  if (statFires) statFires.textContent = fireCount.toLocaleString();
 
   const cellCount = data.risk_cells ? data.risk_cells.length : 0;
-  document.getElementById("stat-cells-count").textContent = cellCount.toLocaleString();
+  const statCells = document.getElementById("stat-cells-count");
+  if (statCells) statCells.textContent = cellCount.toLocaleString();
 
   let maxRisk = 0;
   let maxRiskCell = null;
@@ -475,9 +485,12 @@ function renderHeaderAndStats(data) {
     maxRisk = data.risk_cells[0].risk;
     maxRiskCell = data.risk_cells[0];
   }
-  document.getElementById("stat-max-risk").textContent = `${maxRisk.toFixed(1)}`;
-  if (maxRiskCell) {
-    document.getElementById("stat-max-district").textContent = `Lat ${maxRiskCell.lat.toFixed(2)}, Lon ${maxRiskCell.lon.toFixed(2)}`;
+  const statMaxRisk = document.getElementById("stat-max-risk");
+  if (statMaxRisk) statMaxRisk.textContent = `${maxRisk.toFixed(1)}`;
+  
+  const statMaxDistrict = document.getElementById("stat-max-district");
+  if (maxRiskCell && statMaxDistrict) {
+    statMaxDistrict.textContent = `Lat ${maxRiskCell.lat.toFixed(2)}, Lon ${maxRiskCell.lon.toFixed(2)}`;
   }
 
   // Highest City Threat
@@ -496,8 +509,12 @@ function renderHeaderAndStats(data) {
       }
     });
   }
-  document.getElementById("stat-highest-city").textContent = highestThreatCity;
-  document.getElementById("stat-highest-eta").textContent = highestEta;
+
+  const statHighestCity = document.getElementById("stat-highest-city");
+  if (statHighestCity) statHighestCity.textContent = highestThreatCity;
+  
+  const statHighestEta = document.getElementById("stat-highest-eta");
+  if (statHighestEta) statHighestEta.textContent = highestEta;
 }
 
 /**
