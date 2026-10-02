@@ -6,9 +6,6 @@
 // Global configuration: API_BASE can be overridden by deployment or left blank for local JSON fallback
 const API_BASE = window.API_BASE || "";
 
-// Carto Maps API key for authenticated dark basemap tiles
-const CARTO_API_KEY = "cb1_45g4_1_c1c32825df893b0075fc601b";
-
 // Punjab + Haryana focus coordinates
 const DEFAULT_MAP_CENTER = [30.15, 76.0];
 const DEFAULT_MAP_ZOOM = 7;
@@ -21,6 +18,20 @@ let firesLayer = null;
 let citiesLayer = null;
 let trajectoriesLayer = null;
 
+// Task 1: Custom Location State
+let customLocationMarker = null;
+let customTrajectoriesLayer = null;
+let customLocationData = null; // { lat, lng }
+
+// Task 2: 24h Timeline Forecast State
+let currentHourIndex = 0;
+let playingTimeline = false;
+let timelineInterval = null;
+
+// Task 3: FRP and Risk Threshold Filters State
+let minFrpFilter = 0;
+let minRiskFilter = 0;
+
 let currentData = null;
 let activeCityName = "Delhi";
 
@@ -29,10 +40,18 @@ document.addEventListener("DOMContentLoaded", () => {
   initMap();
   setupEventListeners();
   loadData();
+
+  window.addEventListener("resize", () => {
+    if (map) map.invalidateSize();
+  });
 });
 
+// Leaflet basemap collections
+let baseLayers = {};
+let currentBaseLayer = null;
+
 /**
- * Initialize Leaflet map with CartoDB Dark Matter tiles
+ * Initialize Leaflet map with Google Maps & High-Res Satellite tiles
  */
 function initMap() {
   map = L.map("map", {
@@ -41,23 +60,83 @@ function initMap() {
     zoomControl: true,
   });
 
-  // Dark matter basemap for satellite data contrast
-  L.tileLayer(
-    `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?api_key=${CARTO_API_KEY}`,
+  // 1. Google Satellite Hybrid (Satellite Imagery + City/Road Labels)
+  const googleHybrid = L.tileLayer(
+    "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
     {
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: "abcd",
+      attribution: '&copy; <a href="https://maps.google.com" target="_blank">Google Maps</a> Satellite',
       maxZoom: 20,
-      errorTileUrl: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", // fallback without key on tile error
     }
-  ).addTo(map);
+  );
+
+  // 2. Google Maps Standard Roadmap
+  const googleRoadmap = L.tileLayer(
+    "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+    {
+      attribution: '&copy; <a href="https://maps.google.com" target="_blank">Google Maps</a>',
+      maxZoom: 20,
+    }
+  );
+
+  // 3. Sleek Dark Canvas Mode (Esri Dark - Zero Watermarks)
+  const darkCanvasBase = L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+    {
+      attribution: "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ",
+      maxZoom: 16,
+    }
+  );
+  const darkCanvasLabels = L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}",
+    {
+      attribution: "",
+      maxZoom: 16,
+    }
+  );
+  const darkCanvasGroup = L.layerGroup([darkCanvasBase, darkCanvasLabels]);
+
+  // 4. Esri High-Resolution Satellite
+  const esriSatellite = L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    {
+      attribution: "Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS",
+      maxZoom: 19,
+    }
+  );
+
+  // 5. Google Terrain
+  const googleTerrain = L.tileLayer(
+    "https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
+    {
+      attribution: '&copy; <a href="https://maps.google.com" target="_blank">Google Maps</a> Terrain',
+      maxZoom: 20,
+    }
+  );
+
+  baseLayers = {
+    google_hybrid: googleHybrid,
+    google_roadmap: googleRoadmap,
+    dark_canvas: darkCanvasGroup,
+    esri_satellite: esriSatellite,
+    google_terrain: googleTerrain,
+  };
+
+  // Set default basemap layer to Google Hybrid
+  currentBaseLayer = baseLayers.google_hybrid;
+  currentBaseLayer.addTo(map);
 
   // Initialize Layer Groups
   riskCellsLayer = L.layerGroup().addTo(map);
   firesLayer = L.layerGroup().addTo(map);
   trajectoriesLayer = L.layerGroup().addTo(map);
   citiesLayer = L.layerGroup().addTo(map);
+  customTrajectoriesLayer = L.layerGroup().addTo(map);
+
+  // Task 1: "Click Anywhere on Map" Custom Location Analyzer Handler
+  map.on("click", (e) => {
+    const { lat, lng } = e.latlng;
+    analyzeCustomLocation(lat, lng);
+  });
 }
 
 /**
@@ -67,6 +146,83 @@ function setupEventListeners() {
   document.getElementById("btn-reset-map").addEventListener("click", () => {
     map.flyTo(DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM);
   });
+
+  // Basemap Selector Switcher
+  const basemapSelect = document.getElementById("select-basemap");
+  if (basemapSelect) {
+    basemapSelect.addEventListener("change", (e) => {
+      const selectedKey = e.target.value;
+      if (baseLayers[selectedKey]) {
+        if (currentBaseLayer) {
+          map.removeLayer(currentBaseLayer);
+        }
+        currentBaseLayer = baseLayers[selectedKey];
+        currentBaseLayer.addTo(map);
+      }
+    });
+  }
+
+  // Task 1: Custom Town Preset Selector Switcher
+  const customTownSelect = document.getElementById("select-custom-town");
+  if (customTownSelect) {
+    customTownSelect.addEventListener("change", (e) => {
+      const val = e.target.value;
+      if (val && val.includes(",")) {
+        const parts = val.split(",");
+        const lat = parseFloat(parts[0]);
+        const lng = parseFloat(parts[1]);
+        const selectedOption = e.target.options[e.target.selectedIndex];
+        const townName = selectedOption ? selectedOption.text.split(" (")[0] : null;
+
+        analyzeCustomLocation(lat, lng, currentHourIndex, townName);
+
+        if (map) {
+          map.flyTo([lat, lng], 9, { duration: 1.0 });
+        }
+      }
+    });
+  }
+
+  // Task 3: Min FRP and Min Risk Filter Sliders
+  const filterFrp = document.getElementById("filter-min-frp");
+  const filterRisk = document.getElementById("filter-min-risk");
+
+  if (filterFrp) {
+    filterFrp.addEventListener("input", () => {
+      applyFilters();
+    });
+  }
+
+  if (filterRisk) {
+    filterRisk.addEventListener("input", () => {
+      applyFilters();
+    });
+  }
+
+  // Task 2: Timeline Range Scrubber
+  const timeSlider = document.getElementById("time-slider");
+  if (timeSlider) {
+    timeSlider.addEventListener("input", (e) => {
+      const h = parseInt(e.target.value);
+      updateTimeline(h);
+    });
+  }
+
+  // Task 2: Play/Pause Timeline Animation Button
+  const btnPlay = document.getElementById("btn-play-timeline");
+  if (btnPlay) {
+    btnPlay.addEventListener("click", () => {
+      toggleTimelinePlay();
+    });
+  }
+
+  // Task 1: Clear Custom Location Pin Button
+  const btnClearCustom = document.getElementById("btn-clear-custom");
+  if (btnClearCustom) {
+    btnClearCustom.addEventListener("click", () => {
+      clearCustomLocation();
+    });
+  }
 
   document.getElementById("toggle-risk-cells").addEventListener("change", (e) => {
     if (e.target.checked) {
@@ -285,7 +441,7 @@ function renderCityCards(cities) {
     const headline = `${c.city}: smoke from <em>${c.upwind_fire_count} upwind fires</em>, estimated arrival in <em>${etaText}</em>, level <em>${c.level}</em>.`;
 
     const windSpeed = c.wind ? c.wind.speed_kmh.toFixed(1) : "0.0";
-    const windFrom = c.wind ? c.wind.from_deg.toFixed(0) : "0";
+    const windInfo = c.wind ? getWindFlowInfo(c.wind.from_deg) : getWindFlowInfo(0);
 
     card.innerHTML = `
       <div class="city-card-header">
@@ -317,9 +473,25 @@ function renderCityCards(cities) {
       </div>
 
       <div class="city-wind-row">
-        <div class="wind-indicator" title="Wind blowing FROM ${windFrom}°">
-          <span class="compass-arrow" style="transform: rotate(${windFrom}deg);">⬇</span>
-          <span>Wind: ${windSpeed} km/h from ${windFrom}°</span>
+        <div class="wind-indicator" title="${windInfo.label}">
+          <span class="compass-arrow-badge" style="
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: rgba(6, 182, 212, 0.2);
+            border: 1px solid #06b6d4;
+            transform: rotate(${windInfo.arrowDeg}deg);
+            transition: transform 0.4s ease;
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.4);
+            margin-right: 6px;
+            flex-shrink: 0;
+          ">
+            <span style="font-weight:900; color:#00f0ff; font-size:1rem; line-height:1;">⬆</span>
+          </span>
+          <span><strong>Wind:</strong> ${windSpeed} km/h • ${windInfo.shortLabel} (${windInfo.fromDeg}° ➔ ${windInfo.toDeg}°)</span>
         </div>
         <button class="btn-inspect" type="button">Inspect Plumes</button>
       </div>
@@ -356,7 +528,7 @@ function selectCity(cityName) {
 }
 
 /**
- * Render 0.1° Risk Grid Rectangles
+ * Render 0.1° Risk Grid Rectangles with hover highlights
  */
 function renderRiskCells(cells) {
   riskCellsLayer.clearLayers();
@@ -371,7 +543,7 @@ function renderRiskCells(cells) {
 
     const bounds = [[south, west], [north, east]];
     const color = getRiskColor(c.risk);
-    const opacity = Math.min(0.7, 0.2 + (c.risk / 100.0) * 0.5);
+    const opacity = Math.min(0.65, 0.2 + (c.risk / 100.0) * 0.45);
 
     const rect = L.rectangle(bounds, {
       color: color,
@@ -380,18 +552,27 @@ function renderRiskCells(cells) {
       fillOpacity: opacity,
     });
 
+    rect.on("mouseover", function () {
+      this.setStyle({ weight: 2.5, color: "#ffffff", fillOpacity: Math.min(0.85, opacity + 0.25) });
+    });
+
+    rect.on("mouseout", function () {
+      this.setStyle({ weight: 1, color: color, fillOpacity: opacity });
+    });
+
     rect.bindTooltip(
       `
-      <div style="font-size: 0.82rem; line-height: 1.4;">
-        <strong>Grid Cell ${c.cell_id}</strong><br>
-        Center: ${c.lat.toFixed(2)}°N, ${c.lon.toFixed(2)}°E<br>
-        <span style="color:${color}; font-weight:700;">Stubble Risk: ${c.risk.toFixed(1)} / 100</span><br>
-        48h Active Fires: ${c.fires_48h}<br>
-        History Climatology: ${(c.history_norm * 100).toFixed(1)}%<br>
-        Recent Diffusion: ${(c.recent_norm * 100).toFixed(1)}%
+      <div style="font-size: 0.83rem; line-height: 1.45; padding: 2px;">
+        <div style="font-weight:700; color:${color}; font-size:0.9rem; margin-bottom:2px;">
+          📍 Grid Cell ${c.cell_id} &bull; Stubble Risk: ${c.risk.toFixed(1)}/100
+        </div>
+        Location: ${c.lat.toFixed(2)}°N, ${c.lon.toFixed(2)}°E<br>
+        <strong>48h Active Fires:</strong> ${c.fires_48h}<br>
+        <strong>Historical Climatology:</strong> ${(c.history_norm * 100).toFixed(1)}%<br>
+        <strong>Recent Neighborhood Diffusion:</strong> ${(c.recent_norm * 100).toFixed(1)}%
       </div>
       `,
-      { sticky: true, opacity: 0.95 }
+      { sticky: true, opacity: 0.96 }
     );
 
     riskCellsLayer.addLayer(rect);
@@ -410,32 +591,39 @@ function getRiskColor(risk) {
 }
 
 /**
- * Render VIIRS Active Fire points sized by FRP
+ * Render VIIRS Active Fire points sized by FRP with interactive popups
  */
 function renderFires(fires) {
   firesLayer.clearLayers();
 
   fires.forEach((f) => {
     const frp = f.frp || 10.0;
-    // Radius proportional to sqrt(frp)
-    const radius = Math.min(10, Math.max(3, Math.sqrt(frp) * 1.2));
+    const radius = Math.min(12, Math.max(4, Math.sqrt(frp) * 1.3));
 
     const circle = L.circleMarker([f.lat, f.lon], {
       radius: radius,
       fillColor: "#ff4500",
-      color: "#ffddbb",
-      weight: 1,
-      opacity: 0.9,
+      color: "#ffffff",
+      weight: 1.5,
+      opacity: 0.95,
       fillOpacity: 0.85,
+    });
+
+    circle.on("mouseover", function () {
+      this.setStyle({ weight: 3, color: "#ffff00", fillOpacity: 1.0 });
+    });
+
+    circle.on("mouseout", function () {
+      this.setStyle({ weight: 1.5, color: "#ffffff", fillOpacity: 0.85 });
     });
 
     circle.bindTooltip(
       `
-      <div style="font-size: 0.8rem;">
-        <span style="color:#ff6633; font-weight:700;">🔥 Active Fire Detection</span><br>
-        Coords: ${f.lat.toFixed(4)}, ${f.lon.toFixed(4)}<br>
-        FRP (Radiative Power): <strong>${frp.toFixed(1)} MW</strong><br>
-        Acquired: ${f.acq_date} ${f.acq_time || ""}
+      <div style="font-size: 0.82rem; padding: 2px;">
+        <span style="color:#ff6b4a; font-weight:700;">🔥 Active VIIRS Fire</span><br>
+        FRP (Power): <strong style="color:#fde047;">${frp.toFixed(1)} MW</strong><br>
+        Coords: ${f.lat.toFixed(4)}°N, ${f.lon.toFixed(4)}°E<br>
+        Time: ${f.acq_date} ${f.acq_time || ""}
       </div>
       `,
       { sticky: true }
@@ -466,18 +654,18 @@ function renderCities(cities) {
         display: flex;
         align-items: center;
         gap: 6px;
-        background: rgba(10, 15, 29, 0.9);
+        background: rgba(10, 15, 29, 0.92);
         border: 2px solid #06b6d4;
         border-radius: 20px;
-        padding: 3px 10px;
+        padding: 4px 12px;
         color: #fff;
-        font-size: 0.78rem;
+        font-size: 0.82rem;
         font-weight: 700;
-        box-shadow: 0 0 12px rgba(6, 182, 212, 0.6);
+        box-shadow: 0 0 16px rgba(6, 182, 212, 0.7);
         cursor: pointer;
         white-space: nowrap;
       ">
-        <span style="width: 8px; height: 8px; border-radius: 50%; background: #06b6d4;"></span>
+        <span style="width: 9px; height: 9px; border-radius: 50%; background: #06b6d4;"></span>
         ${c.city}
       </div>
     `;
@@ -495,6 +683,31 @@ function renderCities(cities) {
 
     citiesLayer.addLayer(marker);
   });
+}
+
+/**
+ * Helper: Convert wind direction angle (deg) into clear origin & destination flow info
+ */
+function getWindFlowInfo(fromDeg) {
+  const cardinals = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+  const fDeg = (parseFloat(fromDeg || 0) + 360) % 360;
+  const toDeg = (fDeg + 180) % 360;
+
+  const fromIdx = Math.round(fDeg / 22.5) % 16;
+  const toIdx = Math.round(toDeg / 22.5) % 16;
+
+  const fromCard = cardinals[fromIdx];
+  const toCard = cardinals[toIdx];
+
+  return {
+    fromDeg: Math.round(fDeg),
+    toDeg: Math.round(toDeg),
+    fromCardinal: fromCard,
+    toCardinal: toCard,
+    arrowDeg: Math.round(toDeg),
+    label: `Wind blowing FROM ${fromCard} (${Math.round(fDeg)}°) ➔ TO ${toCard} (${Math.round(toDeg)}°)`,
+    shortLabel: `From ${fromCard} ➔ TO ${toCard}`,
+  };
 }
 
 /**
@@ -517,30 +730,405 @@ function drawTrajectories(cityData) {
   cityData.top_sources.forEach((src, idx) => {
     const sPos = [src.lat, src.lon];
 
-    // Dashed trajectory vector
     const line = L.polyline([sPos, cPos], {
-      color: "#38bdf8",
-      weight: Math.max(2, 4 - idx * 0.5),
-      opacity: 0.85,
-      dashArray: "6, 6",
+      color: "#00f0ff",
+      weight: Math.max(2.5, 4.5 - idx * 0.5),
+      opacity: 0.9,
+      dashArray: "8, 8",
     });
 
     line.bindTooltip(
       `
-      <div style="font-size: 0.8rem;">
-        <strong>Smoke Vector #${idx + 1} to ${cityData.city}</strong><br>
+      <div style="font-size: 0.83rem; padding: 3px;">
+        <strong style="color:#00f0ff;">💨 Smoke Transport Vector #${idx + 1} to ${cityData.city}</strong><br>
         Source Cluster: ${src.lat.toFixed(2)}°N, ${src.lon.toFixed(2)}°E<br>
-        Distance: ${src.distance_km.toFixed(1)} km<br>
-        Cluster Fires: ${src.fires} (FRP: ${src.frp.toFixed(1)} MW)
+        Distance: <strong>${src.distance_km.toFixed(1)} km</strong><br>
+        FRP Energy: <strong>${src.frp.toFixed(1)} MW</strong> (${src.fires} fires)
       </div>
       `,
       { sticky: true }
     );
 
     trajectoriesLayer.addLayer(line);
+
+    // Directional flow arrow marker placed at midpoint along trajectory towards city
+    const midLat = (src.lat + cPos[0]) / 2.0;
+    const midLon = (src.lon + cPos[1]) / 2.0;
+    const flowAngle = bearingDeg(src.lat, src.lon, cPos[0], cPos[1]);
+
+    const arrowIcon = L.divIcon({
+      html: `
+        <div style="
+          transform: rotate(${flowAngle - 90}deg);
+          color: #00f0ff;
+          font-size: 1.3rem;
+          font-weight: 900;
+          line-height: 1;
+          filter: drop-shadow(0 0 6px #00f0ff);
+          user-select: none;
+        ">➔</div>
+      `,
+      className: "vector-flow-arrow-pin",
+      iconSize: [20, 20],
+      iconAnchor: [10, 10],
+    });
+
+    const arrowMarker = L.marker([midLat, midLon], { icon: arrowIcon, interactive: false });
+    trajectoriesLayer.addLayer(arrowMarker);
   });
 
   // Fit bounds to show city and its sources
   const allPoints = [cPos, ...cityData.top_sources.map((s) => [s.lat, s.lon])];
   map.flyToBounds(allPoints, { padding: [60, 60], maxZoom: 8, duration: 1.0 });
+}
+
+/* ==========================================================================
+   Task 1: Pure Upwind Geospatial Math & Custom Location Analyzer
+   ========================================================================== */
+
+const EARTH_RADIUS_KM = 6371.0;
+
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const phi1 = (lat1 * Math.PI) / 180;
+  const phi2 = (lat2 * Math.PI) / 180;
+  const dphi = ((lat2 - lat1) * Math.PI) / 180;
+  const dlambda = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(dphi / 2) ** 2 +
+    Math.cos(phi1) * Math.cos(phi2) * Math.sin(dlambda / 2) ** 2;
+  const clamped = Math.min(1.0, Math.max(0.0, a));
+  return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(clamped), Math.sqrt(1 - clamped));
+}
+
+function bearingDeg(lat1, lon1, lat2, lon2) {
+  const phi1 = (lat1 * Math.PI) / 180;
+  const phi2 = (lat2 * Math.PI) / 180;
+  const dlambda = ((lon2 - lon1) * Math.PI) / 180;
+
+  const y = Math.sin(dlambda) * Math.cos(phi2);
+  const x =
+    Math.cos(phi1) * Math.sin(phi2) -
+    Math.sin(phi1) * Math.cos(phi2) * Math.cos(dlambda);
+  const bearingRad = Math.atan2(y, x);
+  return ((bearingRad * 180) / Math.PI + 360.0) % 360.0;
+}
+
+function angleDiffDeg(a, b) {
+  let diff = Math.abs(a - b) % 360.0;
+  if (diff > 180.0) diff = 360.0 - diff;
+  return diff;
+}
+
+function isUpwind(targetLat, targetLon, fireLat, fireLon, windFromDeg, tol = 30) {
+  const bearingToFire = bearingDeg(targetLat, targetLon, fireLat, fireLon);
+  return angleDiffDeg(bearingToFire, windFromDeg) <= tol;
+}
+
+function weightedMedian(pairs) {
+  if (!pairs || pairs.length === 0) return 0.0;
+  const sorted = [...pairs].sort((a, b) => a[0] - b[0]);
+  const totalW = sorted.reduce((sum, p) => sum + p[1], 0);
+  if (totalW <= 0) return sorted[Math.floor(sorted.length / 2)][0];
+  const halfW = totalW / 2.0;
+  let cumW = 0.0;
+  for (const [val, w] of sorted) {
+    cumW += w;
+    if (cumW >= halfW) return val;
+  }
+  return sorted[sorted.length - 1][0];
+}
+
+/**
+ * Task 1: Analyze smoke arrival for any user-clicked custom point on the map
+ */
+function analyzeCustomLocation(lat, lng, hourIdx = currentHourIndex, townName = null) {
+  customLocationData = { lat, lng, name: townName };
+
+  if (!currentData || !currentData.fires) return;
+
+  // Filter fires by min FRP threshold
+  const activeFires = (currentData.fires || []).filter(
+    (f) => (f.frp || 0) >= minFrpFilter
+  );
+
+  // Resolve surface wind from closest monitoring city
+  let windSpeedNow = 10.0;
+  let windFromNow = 300.0;
+
+  const cityCoordsMap = {
+    Delhi: [28.6139, 77.2090],
+    Ludhiana: [30.9010, 75.8573],
+    Chandigarh: [30.7333, 76.7794],
+  };
+
+  if (currentData.cities && currentData.cities.length > 0) {
+    let minCityDist = Infinity;
+    let closestCity = currentData.cities[0];
+
+    currentData.cities.forEach((c) => {
+      const coords = cityCoordsMap[c.city];
+      if (coords) {
+        const d = haversineKm(lat, lng, coords[0], coords[1]);
+        if (d < minCityDist) {
+          minCityDist = d;
+          closestCity = c;
+        }
+      }
+    });
+
+    if (closestCity && closestCity.wind) {
+      windSpeedNow = closestCity.wind.speed_kmh || 10.0;
+      windFromNow = closestCity.wind.from_deg || 300.0;
+    }
+  }
+
+  // Cluster active fires into 0.1° cells
+  const clusters = {};
+  activeFires.forEach((f) => {
+    const fLat = parseFloat(f.lat);
+    const fLon = parseFloat(f.lon);
+    const frp = parseFloat(f.frp || 0);
+
+    const cId = `${Math.floor(fLat / 0.1)}_${Math.floor(fLon / 0.1)}`;
+    if (!clusters[cId]) {
+      const cLat = Math.round((Math.floor(fLat / 0.1) + 0.5) * 0.1 * 1000000) / 1000000;
+      const cLon = Math.round((Math.floor(fLon / 0.1) + 0.5) * 0.1 * 1000000) / 1000000;
+      const dist = haversineKm(lat, lng, cLat, cLon);
+      clusters[cId] = { lat: cLat, lon: cLon, fires: 0, frp: 0.0, distKm: dist };
+    }
+    clusters[cId].fires += 1;
+    clusters[cId].frp += frp;
+  });
+
+  // Filter upwind fire clusters within 600 km
+  const upwindClusters = [];
+  Object.values(clusters).forEach((c) => {
+    if (c.distKm <= 600 && isUpwind(lat, lng, c.lat, c.lon, windFromNow, 30)) {
+      upwindClusters.push(c);
+    }
+  });
+
+  let smokeScore = 0.0;
+  const etaPairs = [];
+  const transportSpeed = Math.max(3.0, windSpeedNow);
+
+  upwindClusters.forEach((c) => {
+    smokeScore += c.frp / (1.0 + c.distKm / 100.0);
+    const cEta = c.distKm / transportSpeed;
+    etaPairs.push([cEta, Math.max(1.0, c.frp)]);
+  });
+
+  let etaHours = null;
+  if (etaPairs.length > 0) {
+    const rawMedian = weightedMedian(etaPairs);
+    const rEta = Math.round(rawMedian);
+    if (rEta <= 48) etaHours = rEta;
+  }
+
+  let level = "LOW";
+  if (smokeScore >= 200) level = "HIGH";
+  else if (smokeScore >= 50) level = "MODERATE";
+
+  const totalUpwindFires = upwindClusters.reduce((sum, c) => sum + c.fires, 0);
+  upwindClusters.sort((a, b) => b.frp - a.frp);
+  const topSources = upwindClusters.slice(0, 5);
+
+  // Render Custom Location Pin Marker
+  if (customLocationMarker) {
+    map.removeLayer(customLocationMarker);
+  }
+
+  const customIcon = L.divIcon({
+    html: `
+      <div style="
+        background: radial-gradient(circle, #00f0ff 0%, #0284c7 70%);
+        border: 2px dashed #ffffff;
+        border-radius: 50%;
+        width: 22px;
+        height: 22px;
+        box-shadow: 0 0 16px #00f0ff, 0 0 30px rgba(0, 240, 255, 0.8);
+      "></div>
+    `,
+    className: "custom-location-pin",
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+  });
+
+  customLocationMarker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
+
+  const etaText = etaHours !== null ? `~${etaHours} hours` : "N/A (Upwind Clear)";
+  const titleText = townName ? `📍 ${townName}` : `📍 Custom Location Analyzer`;
+  const windInfo = getWindFlowInfo(windFromNow);
+
+  const popupHtml = `
+    <div style="font-family: 'Inter', sans-serif; padding: 4px; min-width: 250px;">
+      <div style="font-weight:700; color:#00f0ff; font-size:0.95rem; margin-bottom:6px; border-bottom:1px solid rgba(0,240,255,0.3); padding-bottom:4px;">
+        ${titleText}
+      </div>
+      <div style="font-size:0.83rem; line-height:1.55;">
+        <strong>Coords:</strong> ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E<br>
+        <strong>Upwind Fires (600km):</strong> <span style="color:#ff6b4a; font-weight:700;">${totalUpwindFires} fires</span><br>
+        <strong>Smoke Arrival (ETA):</strong> <strong style="color:#00f0ff;">${etaText}</strong><br>
+        <strong>Threat Level:</strong> <span class="level-badge ${level}" style="padding:2px 8px; font-size:0.75rem;">${level}</span><br>
+        <strong>Threat Score:</strong> ${smokeScore.toFixed(1)}<br>
+        <strong>Wind Speed:</strong> ${windSpeedNow.toFixed(1)} km/h<br>
+        <strong>Wind Flow:</strong> ${windInfo.shortLabel} (${windInfo.fromDeg}° ➔ ${windInfo.toDeg}°)
+      </div>
+    </div>
+  `;
+
+  customLocationMarker.bindPopup(popupHtml, { className: "dark-leaflet-popup" }).openPopup();
+
+  // Draw custom upwind trajectory vectors
+  customTrajectoriesLayer.clearLayers();
+  topSources.forEach((src, idx) => {
+    const line = L.polyline([[src.lat, src.lon], [lat, lng]], {
+      color: "#00f0ff",
+      weight: Math.max(2, 4 - idx * 0.5),
+      dashArray: "6, 6",
+      opacity: 0.95,
+    });
+    line.bindTooltip(
+      `💨 Upwind Cluster #${idx + 1} to Custom Pin<br>Dist: ${src.distKm.toFixed(1)} km &bull; FRP: ${src.frp.toFixed(1)} MW`,
+      { sticky: true }
+    );
+    customTrajectoriesLayer.addLayer(line);
+
+    // Directional flow arrow marker placed at midpoint along trajectory towards custom pin
+    const midLat = (src.lat + lat) / 2.0;
+    const midLon = (src.lon + lng) / 2.0;
+    const flowAngle = bearingDeg(src.lat, src.lon, lat, lng);
+
+    const arrowIcon = L.divIcon({
+      html: `
+        <div style="
+          transform: rotate(${flowAngle - 90}deg);
+          color: #00f0ff;
+          font-size: 1.3rem;
+          font-weight: 900;
+          line-height: 1;
+          filter: drop-shadow(0 0 6px #00f0ff);
+          user-select: none;
+        ">➔</div>
+      `,
+      className: "vector-flow-arrow-pin",
+      iconSize: [20, 20],
+      iconAnchor: [10, 10],
+    });
+
+    const arrowMarker = L.marker([midLat, midLon], { icon: arrowIcon, interactive: false });
+    customTrajectoriesLayer.addLayer(arrowMarker);
+  });
+
+  const clearBtn = document.getElementById("btn-clear-custom");
+  if (clearBtn) clearBtn.style.display = "inline-block";
+}
+
+/**
+ * Task 1: Clear Custom Location Pin and Trajectories
+ */
+function clearCustomLocation() {
+  customLocationData = null;
+  if (customLocationMarker) {
+    map.removeLayer(customLocationMarker);
+    customLocationMarker = null;
+  }
+  if (customTrajectoriesLayer) {
+    customTrajectoriesLayer.clearLayers();
+  }
+  const clearBtn = document.getElementById("btn-clear-custom");
+  if (clearBtn) clearBtn.style.display = "none";
+
+  const townSelect = document.getElementById("select-custom-town");
+  if (townSelect) townSelect.selectedIndex = 0;
+}
+
+/* ==========================================================================
+   Task 2: 24-Hour Forecast Timeline Scrubber & Animation
+   ========================================================================== */
+
+function updateTimeline(hourIdx) {
+  currentHourIndex = hourIdx;
+
+  const display = document.getElementById("time-display");
+  if (display) {
+    display.textContent = hourIdx === 0 ? "Now (+0h)" : `+${hourIdx}h Forecast`;
+  }
+
+  // Update trajectories for active city
+  if (currentData && currentData.cities) {
+    const activeCityData = currentData.cities.find((c) => c.city === activeCityName);
+    if (activeCityData) {
+      drawTrajectories(activeCityData);
+    }
+  }
+
+  // Re-analyze custom location for hourIdx if active
+  if (customLocationData) {
+    analyzeCustomLocation(customLocationData.lat, customLocationData.lng, hourIdx, customLocationData.name);
+  }
+}
+
+function toggleTimelinePlay() {
+  const btn = document.getElementById("btn-play-timeline");
+  const timeSlider = document.getElementById("time-slider");
+
+  if (playingTimeline) {
+    // Pause
+    playingTimeline = false;
+    if (timelineInterval) clearInterval(timelineInterval);
+    if (btn) btn.textContent = "▶ Play Timeline";
+  } else {
+    // Play
+    playingTimeline = true;
+    if (btn) btn.textContent = "⏸ Pause Timeline";
+
+    timelineInterval = setInterval(() => {
+      currentHourIndex = (currentHourIndex + 1) % 25;
+      if (timeSlider) timeSlider.value = currentHourIndex;
+      updateTimeline(currentHourIndex);
+    }, 1000);
+  }
+}
+
+/* ==========================================================================
+   Task 3: FRP and Risk Threshold Filters
+   ========================================================================== */
+
+function applyFilters() {
+  if (!currentData) return;
+
+  const minFrpInput = document.getElementById("filter-min-frp");
+  const minRiskInput = document.getElementById("filter-min-risk");
+
+  minFrpFilter = minFrpInput ? parseFloat(minFrpInput.value) : 0;
+  minRiskFilter = minRiskInput ? parseFloat(minRiskInput.value) : 0;
+
+  const valFrp = document.getElementById("val-min-frp");
+  const valRisk = document.getElementById("val-min-risk");
+
+  if (valFrp) valFrp.textContent = `${minFrpFilter} MW`;
+  if (valRisk) valRisk.textContent = `${minRiskFilter}`;
+
+  const filteredFires = (currentData.fires || []).filter(
+    (f) => (f.frp || 0) >= minFrpFilter
+  );
+  const filteredRiskCells = (currentData.risk_cells || []).filter(
+    (c) => (c.risk || 0) >= minRiskFilter
+  );
+
+  renderFires(filteredFires);
+  renderRiskCells(filteredRiskCells);
+
+  // Update header stats counters
+  const firesStat = document.getElementById("stat-fires-count");
+  const cellsStat = document.getElementById("stat-cells-count");
+
+  if (firesStat) firesStat.textContent = filteredFires.length.toLocaleString();
+  if (cellsStat) cellsStat.textContent = filteredRiskCells.length.toLocaleString();
+
+  if (customLocationData) {
+    analyzeCustomLocation(customLocationData.lat, customLocationData.lng, currentHourIndex, customLocationData.name);
+  }
 }

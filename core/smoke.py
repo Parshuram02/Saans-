@@ -203,6 +203,9 @@ def estimate_smoke(
 
     total_upwind_fires = sum(c["fires"] for c in upwind_clusters)
 
+    speeds_hourly = [round(s, 1) for s in speeds] if speeds else [round(wind_speed_now, 1)]
+    dirs_hourly = [round(d, 1) for d in directions] if directions else [round(wind_from_now, 1)]
+
     return {
         "city": city_name,
         "level": level,
@@ -212,7 +215,10 @@ def estimate_smoke(
         "wind": {
             "from_deg": round(wind_from_now, 1),
             "speed_kmh": round(wind_speed_now, 1),
+            "speed_kmh_hourly": speeds_hourly,
+            "dir_from_deg_hourly": dirs_hourly,
         },
         "top_sources": top_sources,
         "note": "Straight-line, first-order estimate using surface wind at the city.",
     }
+

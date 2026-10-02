@@ -45,7 +45,7 @@ body {
   line-height: 1.6;
   min-height: 100vh;
   overflow-x: hidden;
-  background-image: 
+  background-image:
     radial-gradient(circle at 15% 10%, rgba(20, 184, 166, 0.08) 0%, transparent 40%),
     radial-gradient(circle at 85% 30%, rgba(249, 115, 22, 0.06) 0%, transparent 45%),
     radial-gradient(circle at 50% 80%, rgba(6, 182, 212, 0.05) 0%, transparent 50%);
@@ -154,6 +154,90 @@ body {
   box-shadow: 0 0 12px rgba(6, 182, 212, 0.4);
 }
 
+.mode-switcher-wrapper {
+  position: relative;
+}
+
+.mode-switcher-wrapper:hover .mode-info-popup {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.mode-info-popup {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 320px;
+  max-width: 90vw;
+  background: #0f172a;
+  border: 2px solid var(--accent-cyan);
+  border-radius: 4px;
+  padding: 12px 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.85), 0 0 20px rgba(6, 182, 212, 0.4);
+  z-index: 1200;
+  font-family: 'Inter', sans-serif;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px);
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
+  pointer-events: none;
+}
+
+.mode-info-header {
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  margin-bottom: 8px;
+  font-weight: 800;
+  font-size: 0.82rem;
+  color: var(--accent-cyan);
+  letter-spacing: 0.5px;
+}
+
+.mode-info-header strong {
+  font-weight: 800;
+}
+
+.mode-info-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mode-info-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 2px 0;
+}
+
+.mode-info-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  margin-bottom: 2px;
+}
+
+.mode-info-title.live-title {
+  color: #34d399;
+}
+
+.mode-info-title.replay-title {
+  color: #fb923c;
+}
+
+.mode-info-item p {
+  font-size: 0.78rem;
+  color: #e2e8f0;
+  line-height: 1.4;
+  margin-top: 2px;
+  font-weight: 500;
+}
+
+.mode-info-item p strong {
+  font-weight: 800;
+  color: #ffffff;
+}
+
 .mode-badge {
   display: flex;
   align-items: center;
@@ -190,8 +274,17 @@ body {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.85); }
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
 }
 
 .last-updated {
@@ -332,7 +425,8 @@ body {
   opacity: 0.7;
 }
 
-.city-card:hover, .city-card.active {
+.city-card:hover,
+.city-card.active {
   transform: translateY(-4px);
   border-color: var(--city-accent, #38bdf8);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(6, 182, 212, 0.15);
@@ -514,6 +608,41 @@ body {
   flex-wrap: wrap;
 }
 
+.basemap-selector-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+}
+
+.selector-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.basemap-select {
+  background: #0f172a;
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  outline: none;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.basemap-select:hover,
+.basemap-select:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+}
+
 .toggle-pill {
   display: flex;
   align-items: center;
@@ -546,9 +675,127 @@ body {
   transition: var(--transition);
 }
 
-.toggle-pill input:checked + .pill-slider {
+.toggle-pill input:checked+.pill-slider {
   background: var(--accent-cyan);
   box-shadow: 0 0 8px var(--accent-cyan);
+}
+
+.map-subtitle {
+  font-size: 0.78rem;
+  color: var(--accent-cyan);
+  font-weight: 500;
+}
+
+.filter-pill-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+}
+
+.filter-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.filter-range {
+  width: 70px;
+  accent-color: var(--accent-cyan);
+  cursor: pointer;
+}
+
+.filter-val-badge {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  min-width: 32px;
+}
+
+/* Task 2: Timeline Bar Styles */
+.timeline-bar {
+  background: rgba(10, 15, 29, 0.95);
+  border-bottom: 1px solid var(--border-color);
+  padding: 10px 20px;
+}
+
+.timeline-inner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.btn-play {
+  background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%);
+  color: #ffffff;
+  border: none;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 6px 16px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.4);
+  transition: var(--transition);
+}
+
+.btn-play:hover {
+  transform: scale(1.04);
+  box-shadow: 0 0 18px rgba(6, 182, 212, 0.7);
+}
+
+.timeline-slider-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 260px;
+}
+
+.timeline-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+}
+
+.time-range-input {
+  flex: 1;
+  accent-color: #00f0ff;
+  height: 6px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.time-display-badge {
+  background: rgba(0, 240, 255, 0.15);
+  color: #00f0ff;
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@keyframes pulse-pin {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(0, 240, 255, 0.7);
+  }
+
+  70% {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 12px rgba(0, 240, 255, 0);
+  }
+
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(0, 240, 255, 0);
+  }
 }
 
 .btn-tool {
@@ -900,12 +1147,408 @@ body {
   background: rgba(14, 21, 38, 0.95) !important;
 }
 
-/* Responsive adjustments */
-@media (max-width: 900px) {
+/* ==========================================================================
+   Comprehensive Responsive System (Mobile, Tablet, Desktop)
+   ========================================================================== */
+
+/* 1. Medium / Tablet Devices (max-width: 1024px) */
+@media (max-width: 1024px) {
+  .header-container {
+    padding: 14px 20px;
+  }
+
+  .main-content {
+    padding: 18px 20px;
+    gap: 24px;
+  }
+
   .eval-grid {
     grid-template-columns: 1fr;
+    gap: 28px;
   }
+
   .map-canvas {
-    height: 420px;
+    height: 480px;
+  }
+
+  .stats-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 2. Mobile Landscape & Standard Mobile (max-width: 768px) */
+@media (max-width: 768px) {
+  /* Header & Navigation */
+  .app-header {
+    position: relative; /* Prevent sticky header taking up valuable mobile vertical space */
+  }
+
+  .header-container {
+    padding: 12px 14px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .brand {
+    gap: 10px;
+  }
+
+  .logo-badge {
+    font-size: 1.15rem;
+    padding: 6px 10px;
+  }
+
+  .brand-text h1 {
+    font-size: 1.25rem;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .brand-text .sub-title {
+    font-size: 0.85rem;
+  }
+
+  .brand-text .tagline {
+    font-size: 0.74rem;
+  }
+
+  .header-meta {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .mode-switcher-wrapper {
+    width: 100%;
+  }
+
+  .mode-switcher {
+    width: 100%;
+    display: flex;
+  }
+
+  .btn-mode {
+    flex: 1;
+    justify-content: center;
+    font-size: 0.74rem;
+    padding: 8px 6px;
+    text-align: center;
+  }
+
+  .mode-info-popup {
+    width: calc(100vw - 28px);
+    left: 0;
+    right: 0;
+    box-sizing: border-box;
+  }
+
+  .mode-badge {
+    justify-content: center;
+    width: 100%;
+    padding: 6px 10px;
+    font-size: 0.76rem;
+  }
+
+  .last-updated {
+    text-align: center;
+    font-size: 0.72rem;
+  }
+
+  .honesty-banner {
+    padding: 8px 14px;
+    font-size: 0.76rem;
+  }
+
+  /* Main Container */
+  .main-content {
+    padding: 12px;
+    gap: 20px;
+  }
+
+  /* Key Stats Grid */
+  .stats-bar {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .stat-card {
+    padding: 12px 14px;
+  }
+
+  .stat-label {
+    font-size: 0.74rem;
+  }
+
+  .stat-value {
+    font-size: 1.35rem;
+  }
+
+  .stat-caption {
+    font-size: 0.72rem;
+  }
+
+  /* City Threat Cards */
+  .cities-section h2 {
+    font-size: 1.25rem;
+  }
+
+  .city-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .city-card {
+    padding: 14px;
+  }
+
+  .city-metrics {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .city-wind-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .wind-indicator {
+    font-size: 0.78rem;
+  }
+
+  .btn-inspect {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+    padding: 8px;
+  }
+
+  /* Map Controls Toolbar */
+  .map-card-wrapper {
+    border-radius: var(--radius-md);
+  }
+
+  .map-toolbar {
+    padding: 12px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .toolbar-title {
+    font-size: 0.85rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .map-layer-controls {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .basemap-selector-group,
+  .filter-pill-group {
+    width: 100%;
+    justify-content: space-between;
+    padding: 6px 10px;
+  }
+
+  .basemap-select {
+    width: 100%;
+    font-size: 0.75rem;
+    padding: 4px 6px;
+  }
+
+  .filter-range {
+    width: 55px;
+  }
+
+  .toggle-pill {
+    justify-content: center;
+    padding: 6px 8px;
+    font-size: 0.75rem;
+  }
+
+  #btn-reset-map {
+    grid-column: 1 / -1;
+    width: 100%;
+    text-align: center;
+    padding: 8px;
+  }
+
+  /* Timeline Forecast Scrubber */
+  .timeline-bar {
+    padding: 10px 12px;
+  }
+
+  .timeline-inner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .btn-play {
+    width: 100%;
+    text-align: center;
+    padding: 10px;
+    font-size: 0.85rem;
+  }
+
+  .timeline-slider-wrapper {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .timeline-label {
+    font-size: 0.76rem;
+  }
+
+  .time-range-input {
+    width: 100%;
+  }
+
+  .time-display-badge {
+    text-align: center;
+    display: block;
+    width: 100%;
+    padding: 4px 8px;
+  }
+
+  #btn-clear-custom {
+    width: 100%;
+    text-align: center;
+    padding: 8px;
+  }
+
+  /* Map Canvas & Mobile Legend */
+  .map-canvas {
+    height: 380px;
+  }
+
+  /* Convert floating overlay legend to in-flow block below map on mobile */
+  .map-legend-overlay {
+    position: relative;
+    bottom: auto;
+    right: auto;
+    width: 100%;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    padding: 12px 14px;
+    box-shadow: none;
+  }
+
+  /* Evaluation & Backtest Section */
+  .evaluation-section {
+    padding: 16px;
+    border-radius: var(--radius-md);
+  }
+
+  .eval-badge {
+    font-size: 0.7rem;
+  }
+
+  .eval-text-panel h2 {
+    font-size: 1.3rem;
+  }
+
+  .eval-intro {
+    font-size: 0.84rem;
+  }
+
+  .eval-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .eval-table {
+    min-width: 480px; /* Allow smooth horizontal scroll on phone screens */
+  }
+
+  .eval-insight-box {
+    font-size: 0.8rem;
+    padding: 10px 12px;
+  }
+
+  .chart-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  /* Documentation & Limitations */
+  .docs-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .doc-card {
+    padding: 16px;
+  }
+
+  .doc-card h3 {
+    font-size: 0.98rem;
+  }
+
+  .doc-card p {
+    font-size: 0.82rem;
+  }
+
+  .limitations-box {
+    padding: 16px;
+  }
+
+  .lim-header h3 {
+    font-size: 0.98rem;
+  }
+
+  .lim-list {
+    font-size: 0.8rem;
+  }
+
+  /* Footer */
+  .app-footer {
+    padding: 18px 14px;
+    margin-top: 24px;
+  }
+
+  .footer-inner {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+  }
+
+  .footer-right {
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+/* 3. Small Mobile Smartphones (max-width: 480px) */
+@media (max-width: 480px) {
+  .stats-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .map-layer-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .map-canvas {
+    height: 340px;
+  }
+
+  .city-metrics {
+    grid-template-columns: 1fr;
   }
 }
