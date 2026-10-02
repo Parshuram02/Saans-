@@ -8,18 +8,18 @@
   <meta name="description"
     content="Near-real-time satellite fire risk scoring and meteorological smoke arrival estimation for Delhi-NCR and Indo-Gangetic Plains.">
 
-  <!-- Google Fonts: Outfit & Inter -->
+  <!-- Google Fonts: Outfit, Plus Jakarta Sans, Inter, JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
     rel="stylesheet">
 
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 
-  <link rel="stylesheet" href="style.css?v=2">
+  <link rel="stylesheet" href="style.css?v=3">
 </head>
 
 <body>
@@ -37,8 +37,8 @@
       <div class="header-meta">
         <div class="mode-switcher-wrapper">
           <div class="mode-switcher" role="group" aria-label="Dataset Mode">
-            <button id="btn-mode-live" class="btn-mode active" type="button">🛰️ Live Telemetry</button>
-            <button id="btn-mode-replay" class="btn-mode" type="button">🔥 Peak Replay (2024-11-01)</button>
+            <button id="btn-mode-live" class="btn-mode active" type="button">🛰️ Live Telemetry (03 Oct 2026)</button>
+            <button id="btn-mode-replay" class="btn-mode" type="button">🔥 Peak Replay (01 Nov 2024)</button>
           </div>
           <!-- Rectangular Mode Purpose Hover Box -->
           <div id="mode-info-popup" class="mode-info-popup">
@@ -47,13 +47,13 @@
             </div>
             <div class="mode-info-body">
               <div class="mode-info-item">
-                <div class="mode-info-title live-title">🛰️ LIVE TELEMETRY MODE</div>
+                <div class="mode-info-title live-title">🛰️ LIVE TELEMETRY MODE (03 OCT 2026)</div>
                 <p><strong>PURPOSE:</strong> Real-time tracking of active stubble fires using <strong>NASA VIIRS satellites</strong> + <strong>Open-Meteo live wind forecasts</strong>.</p>
               </div>
               <div class="mode-info-divider"></div>
               <div class="mode-info-item">
-                <div class="mode-info-title replay-title">🔥 PEAK REPLAY MODE (2024-11-01)</div>
-                <p><strong>PURPOSE:</strong> Replays peak burning season (<strong>800+ active fires</strong>) for model validation and smoke plume analysis.</p>
+                <div class="mode-info-title replay-title">🔥 PEAK REPLAY MODE (01 NOV 2024)</div>
+                <p><strong>PURPOSE:</strong> Replays annual peak burning episode (<strong>179 verified fires in Punjab & Haryana</strong>) for severe smoke plume analysis and model validation.</p>
               </div>
             </div>
           </div>
@@ -138,19 +138,22 @@
               </select>
             </div>
             <div class="basemap-selector-group">
-              <span class="selector-label">📍 Custom Location:</span>
-              <select id="select-custom-town" class="basemap-select" title="Analyze custom town coordinates">
-                <option value="" disabled selected>Click Map or Pick Town...</option>
-                <option value="28.5355,77.3910">Noida (28.54°N, 77.39°E)</option>
-                <option value="28.4595,77.0266">Gurgaon (28.46°N, 77.03°E)</option>
-                <option value="30.3398,76.3869">Patiala (30.34°N, 76.39°E)</option>
-                <option value="31.6340,74.8723">Amritsar (31.63°N, 74.87°E)</option>
-                <option value="30.2110,74.9455">Bathinda (30.21°N, 74.95°E)</option>
-                <option value="31.3260,75.5762">Jalandhar (31.33°N, 75.58°E)</option>
-                <option value="29.1492,75.7217">Hisar (29.15°N, 75.72°E)</option>
-                <option value="29.6857,76.9905">Karnal (29.69°N, 76.99°E)</option>
-                <option value="28.4089,77.3178">Faridabad (28.41°N, 77.32°E)</option>
-                <option value="29.3909,76.9635">Panipat (29.39°N, 76.96°E)</option>
+              <span class="selector-label">📍 Delhi Location:</span>
+              <select id="select-custom-town" class="basemap-select" title="Analyze smoke arrival for specific Delhi locations">
+                <option value="" disabled selected>Click Map or Select Delhi Locality...</option>
+                <option value="28.6304,77.2177">Connaught Place (Central Delhi)</option>
+                <option value="28.6502,77.3150">Anand Vihar (East Delhi)</option>
+                <option value="28.7495,77.0667">Rohini (North Delhi)</option>
+                <option value="28.5823,77.0500">Dwarka (West Delhi)</option>
+                <option value="28.5244,77.2066">Saket (South Delhi)</option>
+                <option value="28.5562,77.0999">IGI Airport (Terminal 3)</option>
+                <option value="28.5494,77.2001">Hauz Khas (South Delhi)</option>
+                <option value="28.6562,77.2410">Chandni Chowk (Old Delhi)</option>
+                <option value="28.6517,77.1906">Karol Bagh (Central Delhi)</option>
+                <option value="28.5700,77.2400">Lajpat Nagar (South Delhi)</option>
+                <option value="28.6219,77.0878">Janakpuri (West Delhi)</option>
+                <option value="28.6978,77.1406">Pitampura (North West Delhi)</option>
+                <option value="28.6692,77.2800">Shahdara (North East Delhi)</option>
               </select>
             </div>
             <div class="filter-pill-group">
@@ -179,44 +182,7 @@
               <span>Smoke Vectors</span>
             </label>
             <button id="btn-reset-map" class="btn-tool" title="Reset Map View">🎯 Center View</button>
-          </div>
-        </div>
-
-        <!-- 24-Hour Wind & Plume Forecast Timeline Bar (Task 2 + 2h Interval Scrubbing) -->
-        <div class="timeline-bar">
-          <div class="timeline-inner">
-            <button id="btn-play-timeline" class="btn-play" type="button" title="Play 24-Hour Forecast Animation">▶ Play Timeline</button>
-            <div class="timeline-slider-wrapper">
-              <span class="timeline-label">⏱️ Live Plume Progression:</span>
-              <input type="range" id="time-slider" min="0" max="24" value="0" step="1" class="time-range-input">
-              <span id="time-display" class="time-display-badge">Now (+0h)</span>
-            </div>
-            <button id="btn-clear-custom" class="btn-tool" type="button" style="display:none;"
-              title="Clear Custom Location Marker">❌ Clear Custom Pin</button>
-          </div>
-
-          <!-- 2-Hour Milestone Jump Pills -->
-          <div class="timeline-step-pills-row">
-            <span class="step-pills-label">2h Wave Intervals:</span>
-            <div class="step-pills-group" id="step-pills-container">
-              <button class="btn-step-pill active" data-hour="0" type="button">Now (0h)</button>
-              <button class="btn-step-pill" data-hour="2" type="button">+2h</button>
-              <button class="btn-step-pill" data-hour="4" type="button">+4h</button>
-              <button class="btn-step-pill" data-hour="6" type="button">+6h</button>
-              <button class="btn-step-pill" data-hour="8" type="button">+8h</button>
-              <button class="btn-step-pill" data-hour="10" type="button">+10h</button>
-              <button class="btn-step-pill" data-hour="12" type="button">+12h</button>
-              <button class="btn-step-pill" data-hour="14" type="button">+14h</button>
-              <button class="btn-step-pill" data-hour="16" type="button">+16h</button>
-              <button class="btn-step-pill" data-hour="20" type="button">+20h</button>
-              <button class="btn-step-pill" data-hour="24" type="button">+24h</button>
-            </div>
-          </div>
-
-          <!-- Live Forecast Progression Status Banner -->
-          <div id="timeline-forecast-status" class="timeline-status-banner">
-            <span class="pulse-indicator-live"></span>
-            <span id="timeline-status-text"><strong>T+0h Current State:</strong> Upwind stubble smoke traveling at ~11 km/h towards Delhi sectors.</span>
+            <button id="btn-clear-custom" class="btn-tool" type="button" style="display:none;" title="Clear Custom Location Marker">❌ Clear Pin</button>
           </div>
         </div>
 
@@ -249,6 +215,27 @@
               <span>Upwind Smoke Transport Vector</span>
             </div>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Dynamic Delhi NCR Smoke Threat Profile Graph -->
+    <section class="telemetry-graph-section" aria-label="Delhi NCR Threat Profile Graph">
+      <div class="section-title-row">
+        <h2>Delhi & NCR Smoke Influx & Threat Profile</h2>
+        <span class="section-hint" id="graph-mode-hint">Live comparison across Delhi monitoring sectors</span>
+      </div>
+      <div class="graph-card">
+        <div class="graph-header-row">
+          <div class="graph-metric-pills">
+            <button type="button" class="graph-pill active" id="pill-metric-score">Smoke Threat Score</button>
+            <button type="button" class="graph-pill" id="pill-metric-fires">Upwind Fire Count</button>
+            <button type="button" class="graph-pill" id="pill-metric-wind">Surface Wind Speed</button>
+          </div>
+          <div class="graph-mode-indicator" id="graph-mode-indicator">Mode: Live Telemetry</div>
+        </div>
+        <div class="bars-chart-container" id="telemetry-bars-chart">
+          <!-- Rendered dynamically by app.js -->
         </div>
       </div>
     </section>
@@ -397,7 +384,7 @@
   <!-- Leaflet JS from CDN -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=9"></script>
 </body>
 
 </html>

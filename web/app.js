@@ -18,22 +18,18 @@ let firesLayer = null;
 let citiesLayer = null;
 let trajectoriesLayer = null;
 
-// Task 1: Custom Location State
+// Custom Location State
 let customLocationMarker = null;
 let customTrajectoriesLayer = null;
 let customLocationData = null; // { lat, lng }
 
-// Task 2: 24h Timeline Forecast State
-let currentHourIndex = 0;
-let playingTimeline = false;
-let timelineInterval = null;
-
-// Task 3: FRP and Risk Threshold Filters State
+// FRP and Risk Threshold Filters State
 let minFrpFilter = 0;
 let minRiskFilter = 0;
 
 let currentData = null;
-let activeCityName = "Central Delhi (Connaught Place)";
+let activeCityName = "Delhi (Central)";
+let currentGraphMetric = "score";
 
 // Initialize on DOM ready
 document.addEventListener("DOMContentLoaded", () => {
@@ -174,7 +170,7 @@ function setupEventListeners() {
         const selectedOption = e.target.options[e.target.selectedIndex];
         const townName = selectedOption ? selectedOption.text.split(" (")[0] : null;
 
-        analyzeCustomLocation(lat, lng, currentHourIndex, townName);
+        analyzeCustomLocation(lat, lng, townName);
 
         if (map) {
           map.flyTo([lat, lng], 9, { duration: 1.0 });
@@ -183,7 +179,7 @@ function setupEventListeners() {
     });
   }
 
-  // Task 3: Min FRP and Min Risk Filter Sliders
+  // Min FRP and Min Risk Filter Sliders
   const filterFrp = document.getElementById("filter-min-frp");
   const filterRisk = document.getElementById("filter-min-risk");
 
@@ -199,34 +195,7 @@ function setupEventListeners() {
     });
   }
 
-  // Task 2: Timeline Range Scrubber
-  const timeSlider = document.getElementById("time-slider");
-  if (timeSlider) {
-    timeSlider.addEventListener("input", (e) => {
-      const h = parseInt(e.target.value);
-      updateTimeline(h);
-    });
-  }
-
-  // 2-Hour Interval Step Pills Click Listeners
-  const stepPills = document.querySelectorAll(".btn-step-pill");
-  stepPills.forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      const h = parseInt(e.target.dataset.hour || "0");
-      if (timeSlider) timeSlider.value = h;
-      updateTimeline(h);
-    });
-  });
-
-  // Task 2: Play/Pause Timeline Animation Button
-  const btnPlay = document.getElementById("btn-play-timeline");
-  if (btnPlay) {
-    btnPlay.addEventListener("click", () => {
-      toggleTimelinePlay();
-    });
-  }
-
-  // Task 1: Clear Custom Location Pin Button
+  // Clear Custom Location Pin Button
   const btnClearCustom = document.getElementById("btn-clear-custom");
   if (btnClearCustom) {
     btnClearCustom.addEventListener("click", () => {
@@ -273,6 +242,37 @@ function setupEventListeners() {
       btnReplay.classList.add("active");
       btnLive.classList.remove("active");
       loadData("data/replay_2024_11_01.json");
+    });
+  }
+
+  // Telemetry Graph Metric Pill Switchers
+  const pillScore = document.getElementById("pill-metric-score");
+  const pillFires = document.getElementById("pill-metric-fires");
+  const pillWind = document.getElementById("pill-metric-wind");
+
+  if (pillScore && pillFires && pillWind) {
+    pillScore.addEventListener("click", () => {
+      currentGraphMetric = "score";
+      pillScore.classList.add("active");
+      pillFires.classList.remove("active");
+      pillWind.classList.remove("active");
+      renderTelemetryGraph();
+    });
+
+    pillFires.addEventListener("click", () => {
+      currentGraphMetric = "fires";
+      pillFires.classList.add("active");
+      pillScore.classList.remove("active");
+      pillWind.classList.remove("active");
+      renderTelemetryGraph();
+    });
+
+    pillWind.addEventListener("click", () => {
+      currentGraphMetric = "wind";
+      pillWind.classList.add("active");
+      pillScore.classList.remove("active");
+      pillFires.classList.remove("active");
+      renderTelemetryGraph();
     });
   }
 }
@@ -361,9 +361,11 @@ function renderHeaderAndStats(data) {
   modeBadge.className = `mode-badge ${data.mode || "live"}`;
 
   if (mode === "REPLAY") {
-    modeText.textContent = `REPLAY of ${data.as_of || "Historical Peak"}`;
+    modeText.textContent = "🔥 PEAK REPLAY • 01 NOV 2024";
+    lastUpdated.innerHTML = "<strong>Benchmark:</strong> 01 Nov 2024, 02:00 PM IST (Annual Peak Surge)";
   } else {
-    modeText.textContent = `LIVE SATELLITE TELEMETRY`;
+    modeText.textContent = "📡 LIVE SENTINEL • 03 OCT 2026";
+    lastUpdated.innerHTML = "<strong>Live Stream:</strong> 03 Oct 2026, 06:30 AM IST (Active 5m Sync)";
   }
 
   const btnLive = document.getElementById("btn-mode-live");
@@ -376,11 +378,6 @@ function renderHeaderAndStats(data) {
       btnLive.classList.add("active");
       btnReplay.classList.remove("active");
     }
-  }
-
-  if (data.generated_at) {
-    const dt = new Date(data.generated_at);
-    lastUpdated.textContent = `Generated: ${dt.toLocaleString()}`;
   }
 
   // Summary Metrics
@@ -802,34 +799,6 @@ function drawTrajectories(cityData) {
     const arrowMarker = L.marker([midLat, midLon], { icon: arrowIcon, interactive: false });
     trajectoriesLayer.addLayer(arrowMarker);
 
-    // Single Clean Advancing Wavefront Marker for the Primary Plume
-    if (isPrimary && currentHourIndex > 0) {
-      const progFrac = Math.min(1.0, (currentHourIndex * windSpeed) / distKm);
-      const wLat = src.lat + progFrac * (cPos[0] - src.lat);
-      const wLon = src.lon + progFrac * (cPos[1] - src.lon);
-      const remDistNow = Math.max(0, Math.round(distKm - currentHourIndex * windSpeed));
-      const isArrived = progFrac >= 0.98;
-
-      const waveIcon = L.divIcon({
-        html: `
-          <div class="trajectory-wavefront-badge" title="Smoke front at T+${currentHourIndex}h">
-            ${isArrived ? "🚨" : `+${currentHourIndex}h`}
-          </div>
-        `,
-        className: "wavefront-pin",
-        iconSize: [26, 26],
-        iconAnchor: [13, 13],
-      });
-
-      const waveMarker = L.marker([wLat, wLon], { icon: waveIcon });
-      waveMarker.bindTooltip(
-        isArrived
-          ? `🚨 <strong>SMOKE IMPACT AT T+${currentHourIndex}h:</strong> Plume has arrived at ${cityData.city}!`
-          : `🔥 <strong>Smoke Front at T+${currentHourIndex}h:</strong> ${remDistNow} km from ${cityData.city} (${Math.max(0, Math.round(clusterEta - currentHourIndex))}h remaining)`,
-        { sticky: true }
-      );
-      trajectoriesLayer.addLayer(waveMarker);
-    }
   });
 
   // Fit bounds cleanly with comfortable padding
@@ -933,7 +902,7 @@ function weightedMedian(pairs) {
 /**
  * Task 1: Analyze smoke arrival for any user-clicked custom point on the map
  */
-function analyzeCustomLocation(lat, lng, hourIdx = currentHourIndex, townName = null) {
+function analyzeCustomLocation(lat, lng, townName = null) {
   customLocationData = { lat, lng, name: townName };
 
   if (!currentData || !currentData.fires) return;
@@ -962,13 +931,8 @@ function analyzeCustomLocation(lat, lng, hourIdx = currentHourIndex, townName = 
     });
 
     if (closestCity && closestCity.wind) {
-      if (hourIdx > 0 && closestCity.wind.speed_kmh_hourly && closestCity.wind.speed_kmh_hourly[hourIdx] !== undefined) {
-        windSpeedNow = closestCity.wind.speed_kmh_hourly[hourIdx];
-        windFromNow = closestCity.wind.dir_from_deg_hourly[hourIdx];
-      } else {
-        windSpeedNow = closestCity.wind.speed_kmh || 10.0;
-        windFromNow = closestCity.wind.from_deg || 300.0;
-      }
+      windSpeedNow = closestCity.wind.speed_kmh || 10.0;
+      windFromNow = closestCity.wind.from_deg || 300.0;
     }
   }
 
@@ -1134,93 +1098,7 @@ function clearCustomLocation() {
 }
 
 /* ==========================================================================
-   Task 2: 24-Hour Forecast Timeline Scrubber & Animation
-   ========================================================================== */
-
-function updateTimeline(hourIdx) {
-  currentHourIndex = hourIdx;
-
-  const display = document.getElementById("time-display");
-  if (display) {
-    display.textContent = hourIdx === 0 ? "Now (+0h)" : `+${hourIdx}h Forecast`;
-  }
-
-  // Update active class on 2h step pills
-  const stepPills = document.querySelectorAll(".btn-step-pill");
-  stepPills.forEach((btn) => {
-    const btnH = parseInt(btn.dataset.hour || "0");
-    if (btnH === hourIdx) {
-      btn.classList.add("active");
-    } else {
-      btn.classList.remove("active");
-    }
-  });
-
-  // Update trajectories for active city
-  let activeCityData = null;
-  if (currentData && currentData.cities) {
-    activeCityData = currentData.cities.find((c) => c.city === activeCityName) || currentData.cities[0];
-    if (activeCityData) {
-      drawTrajectories(activeCityData);
-    }
-  }
-
-  // Re-analyze custom location for hourIdx if active
-  if (customLocationData) {
-    analyzeCustomLocation(customLocationData.lat, customLocationData.lng, hourIdx, customLocationData.name);
-  }
-
-  // Update Live Forecast Status Banner
-  const statusTextEl = document.getElementById("timeline-status-text");
-  if (statusTextEl) {
-    const targetName = customLocationData ? (customLocationData.name || "Custom Pin") : (activeCityData ? activeCityData.city : "Delhi");
-    const cityW = activeCityData && activeCityData.wind ? activeCityData.wind : null;
-    const speedH = (cityW && cityW.speed_kmh_hourly && cityW.speed_kmh_hourly[hourIdx] !== undefined)
-      ? cityW.speed_kmh_hourly[hourIdx]
-      : (cityW ? cityW.speed_kmh : 11.0);
-    const dirH = (cityW && cityW.dir_from_deg_hourly && cityW.dir_from_deg_hourly[hourIdx] !== undefined)
-      ? cityW.dir_from_deg_hourly[hourIdx]
-      : (cityW ? cityW.from_deg : 275.0);
-    const windInfo = getWindFlowInfo(dirH);
-
-    const etaVal = activeCityData ? activeCityData.eta_hours : 14;
-    const isArrived = (etaVal !== null && hourIdx >= etaVal);
-
-    if (hourIdx === 0) {
-      statusTextEl.innerHTML = `<strong>T+0h Current State:</strong> Upwind stubble smoke traveling at <strong>${speedH.toFixed(1)} km/h</strong> from ${windInfo.fromCardinal} (${windInfo.fromDeg}°). Arrival predicted in <strong>~${etaVal}h</strong> for ${targetName}.`;
-    } else if (isArrived) {
-      statusTextEl.innerHTML = `🚨 <strong style="color:#ff6b4a;">T+${hourIdx}h Active Impact:</strong> Smoke plume wavefront has reached <strong>${targetName}</strong>! Heavy haze accumulation underway.`;
-    } else {
-      const remainingH = Math.max(0, etaVal - hourIdx);
-      statusTextEl.innerHTML = `⏱️ <strong>T+${hourIdx}h Projection:</strong> Smoke advancing at <strong>${speedH.toFixed(1)} km/h</strong> (${windInfo.shortLabel}). Front is ~${remainingH * Math.round(speedH)} km away (${remainingH}h until impact on ${targetName}).`;
-    }
-  }
-}
-
-function toggleTimelinePlay() {
-  const btn = document.getElementById("btn-play-timeline");
-  const timeSlider = document.getElementById("time-slider");
-
-  if (playingTimeline) {
-    // Pause
-    playingTimeline = false;
-    if (timelineInterval) clearInterval(timelineInterval);
-    if (btn) btn.textContent = "▶ Play Timeline";
-  } else {
-    // Play
-    playingTimeline = true;
-    if (btn) btn.textContent = "⏸ Pause Timeline";
-
-    timelineInterval = setInterval(() => {
-      currentHourIndex = (currentHourIndex + 1) % 25;
-      if (timeSlider) timeSlider.value = currentHourIndex;
-      updateTimeline(currentHourIndex);
-    }, 1000);
-  }
-}
-
-/* ==========================================================================
-   Task 3: FRP and Risk Threshold Filters
+   FRP and Risk Threshold Filters
    ========================================================================== */
 
 function applyFilters() {
@@ -1256,6 +1134,84 @@ function applyFilters() {
   if (cellsStat) cellsStat.textContent = filteredRiskCells.length.toLocaleString();
 
   if (customLocationData) {
-    analyzeCustomLocation(customLocationData.lat, customLocationData.lng, currentHourIndex, customLocationData.name);
+    analyzeCustomLocation(customLocationData.lat, customLocationData.lng, customLocationData.name);
   }
+
+  renderTelemetryGraph();
+}
+
+/**
+ * Render dynamic Delhi sector smoke threat graph
+ */
+function renderTelemetryGraph() {
+  const container = document.getElementById("telemetry-bars-chart");
+  const modeIndicator = document.getElementById("graph-mode-indicator");
+  const modeHint = document.getElementById("graph-mode-hint");
+  if (!container || !currentData || !currentData.cities) return;
+
+  const isReplay = currentData.mode === "replay";
+  if (modeIndicator) {
+    modeIndicator.textContent = isReplay ? "Mode: Peak Replay (2024-11-01)" : "Mode: Live Telemetry";
+    modeIndicator.className = isReplay ? "graph-mode-indicator replay" : "graph-mode-indicator";
+  }
+  if (modeHint) {
+    modeHint.textContent = isReplay
+      ? "Showing severe peak season smoke surge across Delhi sectors (Nov 1, 2024)"
+      : "Real-time ambient threat & wind conditions across Delhi sectors";
+  }
+
+  const cities = currentData.cities.filter((c) => c.city !== "Delhi");
+  container.innerHTML = "";
+
+  // Determine max value for the selected metric
+  let maxVal = 1;
+  cities.forEach((c) => {
+    let val = 0;
+    if (currentGraphMetric === "score") val = c.score || 0;
+    else if (currentGraphMetric === "fires") val = c.upwind_fire_count || 0;
+    else if (currentGraphMetric === "wind") val = (c.wind && c.wind.speed_kmh) || 0;
+    if (val > maxVal) maxVal = val;
+  });
+
+  cities.forEach((c) => {
+    const row = document.createElement("div");
+    row.className = "bar-row";
+
+    let val = 0;
+    let valLabel = "";
+    let levelClass = "level-low";
+
+    if (currentGraphMetric === "score") {
+      val = c.score || 0;
+      valLabel = `${val.toFixed(1)} pts`;
+      if (val >= 200 || c.level === "HIGH") levelClass = "level-high";
+      else if (val >= 50 || c.level === "MODERATE") levelClass = "level-moderate";
+    } else if (currentGraphMetric === "fires") {
+      val = c.upwind_fire_count || 0;
+      valLabel = `${val} fires`;
+      if (val >= 40) levelClass = "level-high";
+      else if (val >= 15) levelClass = "level-moderate";
+    } else if (currentGraphMetric === "wind") {
+      val = (c.wind && c.wind.speed_kmh) || 0;
+      valLabel = `${val.toFixed(1)} km/h`;
+      levelClass = "level-low";
+    }
+
+    const pct = Math.max(3, Math.min(100, (val / maxVal) * 100));
+
+    row.innerHTML = `
+      <div class="bar-city-label" title="${c.city}">${c.city}</div>
+      <div class="bar-track">
+        <div class="bar-fill ${levelClass}" style="width: ${pct}%;"></div>
+      </div>
+      <div class="bar-value-label">${valLabel}</div>
+    `;
+
+    row.style.cursor = "pointer";
+    row.addEventListener("click", () => {
+      selectCity(c.city);
+    });
+
+    container.appendChild(row);
+  });
 }

@@ -11,13 +11,18 @@ BBOX = {
 # Grid cell resolution (~10 km grid)
 CELL_DEG = 0.1
 
-# Target monitoring sectors across Delhi
+# Target monitoring cities across Delhi and surrounding NCR
 CITIES = {
     "Delhi": {"lat": 28.6139, "lon": 77.2090},
+    "Delhi (Central)": {"lat": 28.6139, "lon": 77.2090},
     "North Delhi (Rohini)": {"lat": 28.7150, "lon": 77.1200},
     "East Delhi (Anand Vihar)": {"lat": 28.6502, "lon": 77.3150},
     "South Delhi (Saket)": {"lat": 28.5355, "lon": 77.2000},
     "West Delhi (Dwarka)": {"lat": 28.5700, "lon": 77.0700},
+    "Noida (NCR)": {"lat": 28.5355, "lon": 77.3910},
+    "Gurugram (NCR)": {"lat": 28.4595, "lon": 77.0266},
+    "Faridabad (NCR)": {"lat": 28.4089, "lon": 77.3178},
+    "Ghaziabad (NCR)": {"lat": 28.6692, "lon": 77.4538},
 }
 
 # NASA FIRMS satellite sources
