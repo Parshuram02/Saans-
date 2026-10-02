@@ -35,12 +35,79 @@ let currentGraphMetric = "score";
 document.addEventListener("DOMContentLoaded", () => {
   initMap();
   setupEventListeners();
+  setupNavbarNavigation();
   loadData();
 
   window.addEventListener("resize", () => {
     if (map) map.invalidateSize();
   });
 });
+
+/**
+ * Setup Navbar scroll shadow, mobile menu toggle, and active section tracking
+ */
+function setupNavbarNavigation() {
+  const header = document.getElementById("app-header");
+  const mobileBtn = document.getElementById("mobile-toggle-btn");
+  const mobilePanel = document.getElementById("mobile-nav-panel");
+  const navLinks = document.querySelectorAll(".nav-link, .mobile-nav-link");
+
+  // Faint scroll shadow past 8px
+  window.addEventListener("scroll", () => {
+    if (window.scrollY > 8) {
+      if (header) header.classList.add("scrolled");
+    } else {
+      if (header) header.classList.remove("scrolled");
+    }
+  });
+
+  // Mobile drawer toggle
+  if (mobileBtn && mobilePanel) {
+    mobileBtn.addEventListener("click", () => {
+      const isOpen = mobilePanel.classList.contains("is-open");
+      if (isOpen) {
+        mobilePanel.classList.remove("is-open");
+        mobileBtn.setAttribute("aria-expanded", "false");
+        mobilePanel.setAttribute("aria-hidden", "true");
+      } else {
+        mobilePanel.classList.add("is-open");
+        mobileBtn.setAttribute("aria-expanded", "true");
+        mobilePanel.setAttribute("aria-hidden", "false");
+      }
+    });
+
+    // Close mobile panel on Escape key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && mobilePanel.classList.contains("is-open")) {
+        mobilePanel.classList.remove("is-open");
+        mobileBtn.setAttribute("aria-expanded", "false");
+        mobilePanel.setAttribute("aria-hidden", "true");
+        mobileBtn.focus();
+      }
+    });
+  }
+
+  // Active section indicator on scroll & link click
+  navLinks.forEach((link) => {
+    link.addEventListener("click", () => {
+      if (mobilePanel && mobilePanel.classList.contains("is-open")) {
+        mobilePanel.classList.remove("is-open");
+        if (mobileBtn) mobileBtn.setAttribute("aria-expanded", "false");
+        mobilePanel.setAttribute("aria-hidden", "true");
+      }
+
+      const targetHref = link.getAttribute("href");
+      if (targetHref && targetHref.startsWith("#")) {
+        navLinks.forEach((l) => {
+          l.classList.remove("active");
+          l.removeAttribute("aria-current");
+        });
+        link.classList.add("active");
+        link.setAttribute("aria-current", "page");
+      }
+    });
+  });
+}
 
 // Leaflet basemap collections
 let baseLayers = {};
@@ -74,7 +141,16 @@ function initMap() {
     }
   );
 
-  // 3. Sleek Dark Canvas Mode (Esri Dark - Zero Watermarks)
+  // 3. OpenStreetMap Standard
+  const osmLayer = L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+    }
+  );
+
+  // 4. Sleek Dark Canvas Mode (Esri Dark - Zero Watermarks)
   const darkCanvasBase = L.tileLayer(
     "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
     {
@@ -91,7 +167,7 @@ function initMap() {
   );
   const darkCanvasGroup = L.layerGroup([darkCanvasBase, darkCanvasLabels]);
 
-  // 4. Esri High-Resolution Satellite
+  // 5. Esri High-Resolution Satellite
   const esriSatellite = L.tileLayer(
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     {
@@ -100,7 +176,7 @@ function initMap() {
     }
   );
 
-  // 5. Google Terrain
+  // 6. Google Terrain
   const googleTerrain = L.tileLayer(
     "https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
     {
@@ -112,6 +188,7 @@ function initMap() {
   baseLayers = {
     google_hybrid: googleHybrid,
     google_roadmap: googleRoadmap,
+    osm: osmLayer,
     dark_canvas: darkCanvasGroup,
     esri_satellite: esriSatellite,
     google_terrain: googleTerrain,
@@ -120,6 +197,11 @@ function initMap() {
   // Set default basemap layer to Google Hybrid
   currentBaseLayer = baseLayers.google_hybrid;
   currentBaseLayer.addTo(map);
+
+  // Ensure canvas size recalculation
+  setTimeout(() => {
+    if (map) map.invalidateSize();
+  }, 250);
 
   // Initialize Layer Groups
   riskCellsLayer = L.layerGroup().addTo(map);
@@ -361,11 +443,11 @@ function renderHeaderAndStats(data) {
   modeBadge.className = `mode-badge ${data.mode || "live"}`;
 
   if (mode === "REPLAY") {
-    modeText.textContent = "🔥 PEAK REPLAY • 01 NOV 2024";
-    lastUpdated.innerHTML = "<strong>Benchmark:</strong> 01 Nov 2024, 02:00 PM IST (Annual Peak Surge)";
+    modeText.textContent = "PEAK REPLAY • 01 NOV 2024";
+    if (lastUpdated) lastUpdated.innerHTML = "<strong>Benchmark:</strong> 01 Nov 2024, 02:00 PM IST";
   } else {
-    modeText.textContent = "📡 LIVE SENTINEL • 03 OCT 2026";
-    lastUpdated.innerHTML = "<strong>Live Stream:</strong> 03 Oct 2026, 06:30 AM IST (Active 5m Sync)";
+    modeText.textContent = "LIVE TELEMETRY • 03 OCT 2026";
+    if (lastUpdated) lastUpdated.innerHTML = "<strong>Live Stream:</strong> 03 Oct 2026, 06:30 AM IST";
   }
 
   const btnLive = document.getElementById("btn-mode-live");
@@ -436,16 +518,8 @@ function renderCityCards(cities) {
     card.id = `card-city-${c.city.toLowerCase()}`;
     card.dataset.city = c.city;
 
-    // Accent color based on level
-    let accent = "#38bdf8";
-    if (c.level === "HIGH") accent = "#ef4444";
-    else if (c.level === "MODERATE") accent = "#f59e0b";
-    else if (c.level === "LOW") accent = "#10b981";
-    else if (c.level === "STAGNANT") accent = "#8b5cf6";
-    card.style.setProperty("--city-accent", accent);
-
     const etaText = c.eta_hours !== null ? `~${c.eta_hours} hours` : (c.level === "STAGNANT" ? "Stagnant" : "N/A");
-    const headline = `${c.city}: smoke from <em>${c.upwind_fire_count} upwind fires</em>, estimated arrival in <em>${etaText}</em>, level <em>${c.level}</em>.`;
+    const headline = `${c.city}: smoke from <em>${c.upwind_fire_count} upwind fires</em>, estimated arrival in <em>${etaText}</em>, threat level <em>${c.level}</em>.`;
 
     const windSpeed = c.wind ? c.wind.speed_kmh.toFixed(1) : "0.0";
     const windInfo = c.wind ? getWindFlowInfo(c.wind.from_deg) : getWindFlowInfo(0);
@@ -485,22 +559,21 @@ function renderCityCards(cities) {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 26px;
-            height: 26px;
+            width: 22px;
+            height: 22px;
             border-radius: 50%;
-            background: rgba(6, 182, 212, 0.2);
-            border: 1px solid #06b6d4;
+            background: #F0EEE8;
+            border: 1px solid #D6D3CC;
             transform: rotate(${windInfo.arrowDeg}deg);
             transition: transform 0.4s ease;
-            box-shadow: 0 0 10px rgba(6, 182, 212, 0.4);
             margin-right: 6px;
             flex-shrink: 0;
           ">
-            <span style="font-weight:900; color:#00f0ff; font-size:1rem; line-height:1;">⬆</span>
+            <span style="font-weight:700; color:#1E4620; font-size:0.75rem; line-height:1;">⬆</span>
           </span>
-          <span><strong>Wind:</strong> ${windSpeed} km/h • ${windInfo.shortLabel} (${windInfo.fromDeg}° ➔ ${windInfo.toDeg}°)</span>
+          <span><strong>Wind:</strong> ${windSpeed} km/h • ${windInfo.shortLabel}</span>
         </div>
-        <button class="btn-inspect" type="button">Inspect Plumes</button>
+        <button class="btn-inspect" type="button">Inspect</button>
       </div>
     `;
 
@@ -659,29 +732,29 @@ function renderCities(cities) {
           display: flex;
           align-items: center;
           gap: 6px;
-          background: rgba(10, 15, 29, 0.96);
-          border: 2px solid #00f0ff;
-          border-radius: 20px;
-          padding: 3px 10px;
-          color: #fff;
+          background: #1E4620;
+          border: 1px solid #153317;
+          border-radius: 6px;
+          padding: 3px 8px;
+          color: #ffffff;
           font-size: 0.78rem;
-          font-weight: 800;
-          box-shadow: 0 0 16px rgba(0, 240, 255, 0.8);
+          font-weight: 600;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.15);
           cursor: pointer;
           white-space: nowrap;
         ">
-          <span style="width: 8px; height: 8px; border-radius: 50%; background: #00f0ff;"></span>
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: #ffffff;"></span>
           ${c.city}
         </div>
       `
       : `
         <div style="
-          width: 12px;
-          height: 12px;
+          width: 10px;
+          height: 10px;
           border-radius: 50%;
-          background: rgba(10, 15, 29, 0.9);
-          border: 2px solid #06b6d4;
-          box-shadow: 0 0 8px rgba(6, 182, 212, 0.8);
+          background: #ffffff;
+          border: 2px solid #1E4620;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.1);
           cursor: pointer;
         "></div>
       `;
@@ -689,12 +762,12 @@ function renderCities(cities) {
     const customIcon = L.divIcon({
       html: iconHtml,
       className: "custom-city-pin",
-      iconAnchor: isSelected ? [35, 12] : [6, 6],
+      iconAnchor: isSelected ? [35, 12] : [5, 5],
     });
 
     const marker = L.marker(pos, { icon: customIcon });
     marker.bindTooltip(
-      `<strong>📍 ${c.city}</strong><br>Threat Level: ${c.level} &bull; Arrival ETA: ~${c.eta_hours !== null ? c.eta_hours + "h" : "N/A"}`,
+      `<strong>${c.city}</strong><br>Threat Level: ${c.level} &bull; Arrival ETA: ~${c.eta_hours !== null ? c.eta_hours + "h" : "N/A"}`,
       { sticky: true }
     );
     marker.on("click", () => {
@@ -751,22 +824,22 @@ function drawTrajectories(cityData) {
     const distKm = src.distance_km || haversineKm(src.lat, src.lon, cPos[0], cPos[1]);
     const clusterEta = distKm / windSpeed;
 
-    // Primary vector is thick and glowing; secondary vectors are lighter
+    // Primary vector is solid accent; secondary vectors are lighter
     const isPrimary = (idx === 0);
     const line = L.polyline([sPos, cPos], {
-      color: isPrimary ? "#00f0ff" : "rgba(6, 182, 212, 0.6)",
-      weight: isPrimary ? 3.5 : 2.0,
-      opacity: isPrimary ? 0.95 : 0.65,
+      color: isPrimary ? "#1E4620" : "#5F6368",
+      weight: isPrimary ? 2.5 : 1.5,
+      opacity: isPrimary ? 0.85 : 0.5,
       className: "animated-trajectory-line",
-      dashArray: isPrimary ? "12, 8" : "6, 6",
+      dashArray: isPrimary ? "8, 6" : "4, 4",
     });
 
     line.bindTooltip(
       `
-      <div style="font-size: 0.83rem; padding: 4px;">
-        <strong style="color:#00f0ff;">💨 Upwind Smoke Plume #${idx + 1} ➔ ${cityData.city}</strong><br>
+      <div style="font-size: 0.82rem; padding: 4px;">
+        <strong style="color:#1E4620;">Upwind Smoke Plume #${idx + 1} ➔ ${cityData.city}</strong><br>
         Source: ${src.lat.toFixed(2)}°N, ${src.lon.toFixed(2)}°E &bull; FRP: <strong>${src.frp.toFixed(1)} MW</strong><br>
-        Total Distance: <strong>${distKm.toFixed(0)} km</strong> &bull; Total ETA: <strong>~${Math.round(clusterEta)} hours</strong>
+        Distance: <strong>${distKm.toFixed(0)} km</strong> &bull; ETA: <strong>~${Math.round(clusterEta)} hours</strong>
       </div>
       `,
       { sticky: true }
@@ -783,11 +856,10 @@ function drawTrajectories(cityData) {
       html: `
         <div style="
           transform: rotate(${flowAngle - 90}deg);
-          color: ${isPrimary ? '#00f0ff' : 'rgba(6, 182, 212, 0.7)'};
-          font-size: 1.1rem;
-          font-weight: 900;
+          color: ${isPrimary ? '#1E4620' : '#5F6368'};
+          font-size: 1rem;
+          font-weight: 700;
           line-height: 1;
-          filter: drop-shadow(0 0 4px #00f0ff);
           user-select: none;
         ">➔</div>
       `,
@@ -995,35 +1067,35 @@ function analyzeCustomLocation(lat, lng, townName = null) {
   const customIcon = L.divIcon({
     html: `
       <div style="
-        background: radial-gradient(circle, #00f0ff 0%, #0284c7 70%);
-        border: 2px dashed #ffffff;
+        background: #1E4620;
+        border: 2px solid #ffffff;
         border-radius: 50%;
-        width: 22px;
-        height: 22px;
-        box-shadow: 0 0 16px #00f0ff, 0 0 30px rgba(0, 240, 255, 0.8);
+        width: 18px;
+        height: 18px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.25);
       "></div>
     `,
     className: "custom-location-pin",
-    iconSize: [22, 22],
-    iconAnchor: [11, 11],
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
   });
 
   customLocationMarker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
 
   const etaText = etaHours !== null ? `~${etaHours} hours` : "N/A (Upwind Clear)";
-  const titleText = townName ? `📍 ${townName}` : `📍 Custom Location Analyzer`;
+  const titleText = townName ? `${townName}` : `Custom Location Analyzer`;
   const windInfo = getWindFlowInfo(windFromNow);
 
   const popupHtml = `
-    <div style="font-family: 'Inter', sans-serif; padding: 4px; min-width: 250px;">
-      <div style="font-weight:700; color:#00f0ff; font-size:0.95rem; margin-bottom:6px; border-bottom:1px solid rgba(0,240,255,0.3); padding-bottom:4px;">
+    <div style="font-family: 'Instrument Sans', sans-serif; padding: 4px; min-width: 240px;">
+      <div style="font-weight:600; color:#1E4620; font-size:0.9rem; margin-bottom:6px; border-bottom:1px solid #E8E6E1; padding-bottom:4px;">
         ${titleText}
       </div>
-      <div style="font-size:0.83rem; line-height:1.55;">
+      <div style="font-size:0.82rem; line-height:1.5; color:#1A1A1A;">
         <strong>Coords:</strong> ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E<br>
-        <strong>Upwind Fires (600km):</strong> <span style="color:#ff6b4a; font-weight:700;">${totalUpwindFires} fires</span><br>
-        <strong>Smoke Arrival (ETA):</strong> <strong style="color:#00f0ff;">${etaText}</strong><br>
-        <strong>Threat Level:</strong> <span class="level-badge ${level}" style="padding:2px 8px; font-size:0.75rem;">${level}</span><br>
+        <strong>Upwind Fires (600km):</strong> <span style="color:#B91C1C; font-weight:600;">${totalUpwindFires} fires</span><br>
+        <strong>Smoke Arrival (ETA):</strong> <strong style="color:#1E4620;">${etaText}</strong><br>
+        <strong>Threat Level:</strong> <span class="level-badge ${level}" style="padding:2px 6px; font-size:0.72rem;">${level}</span><br>
         <strong>Threat Score:</strong> ${smokeScore.toFixed(1)}<br>
         <strong>Wind Speed:</strong> ${windSpeedNow.toFixed(1)} km/h<br>
         <strong>Wind Flow:</strong> ${windInfo.shortLabel} (${windInfo.fromDeg}° ➔ ${windInfo.toDeg}°)
@@ -1037,13 +1109,13 @@ function analyzeCustomLocation(lat, lng, townName = null) {
   customTrajectoriesLayer.clearLayers();
   topSources.forEach((src, idx) => {
     const line = L.polyline([[src.lat, src.lon], [lat, lng]], {
-      color: "#00f0ff",
-      weight: Math.max(2, 4 - idx * 0.5),
+      color: "#1E4620",
+      weight: Math.max(1.5, 3 - idx * 0.5),
       dashArray: "6, 6",
-      opacity: 0.95,
+      opacity: 0.85,
     });
     line.bindTooltip(
-      `💨 Upwind Cluster #${idx + 1} to Custom Pin<br>Dist: ${src.distKm.toFixed(1)} km &bull; FRP: ${src.frp.toFixed(1)} MW`,
+      `Upwind Cluster #${idx + 1} to Custom Pin<br>Dist: ${src.distKm.toFixed(1)} km &bull; FRP: ${src.frp.toFixed(1)} MW`,
       { sticky: true }
     );
     customTrajectoriesLayer.addLayer(line);
@@ -1057,17 +1129,16 @@ function analyzeCustomLocation(lat, lng, townName = null) {
       html: `
         <div style="
           transform: rotate(${flowAngle - 90}deg);
-          color: #00f0ff;
-          font-size: 1.3rem;
-          font-weight: 900;
+          color: #1E4620;
+          font-size: 1.1rem;
+          font-weight: 700;
           line-height: 1;
-          filter: drop-shadow(0 0 6px #00f0ff);
           user-select: none;
         ">➔</div>
       `,
       className: "vector-flow-arrow-pin",
-      iconSize: [20, 20],
-      iconAnchor: [10, 10],
+      iconSize: [16, 16],
+      iconAnchor: [8, 8],
     });
 
     const arrowMarker = L.marker([midLat, midLon], { icon: arrowIcon, interactive: false });
