@@ -4,83 +4,92 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Saans (साँस) — Stubble Fire Early Warning System</title>
+  <title>Breathe Ahead — Stubble Fire Early Warning System</title>
   <meta name="description"
     content="Near-real-time satellite fire risk scoring and meteorological smoke arrival estimation for Delhi-NCR and Indo-Gangetic Plains.">
 
-  <!-- Google Fonts: Outfit, Plus Jakarta Sans, Inter, JetBrains Mono -->
+  <!-- Google Fonts: Instrument Sans (UI/Body) & Fraunces (Headings) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..700&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=JetBrains+Mono:wght@400;500;600&display=swap"
     rel="stylesheet">
 
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 
-  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="stylesheet" href="style.css?v=5">
 </head>
 
 <body>
   <!-- Top Navigation & Honesty Banner -->
-  <header class="app-header">
+  <header class="app-header" id="app-header">
     <div class="header-container">
       <div class="brand">
-        <div class="logo-badge">साँस</div>
-        <div class="brand-text">
-          <h1>Saans <span class="sub-title">Early Warning System</span></h1>
-          <p class="tagline">Stubble Fire Risk & Smoke Transport Intelligence • Track: Air</p>
-        </div>
+        <a href="#" class="brand-link">
+          <span class="brand-title">Breathe Ahead</span>
+          <span class="brand-subtitle">Early Warning System</span>
+        </a>
       </div>
 
-      <div class="header-meta">
-        <div class="mode-switcher-wrapper">
-          <div class="mode-switcher" role="group" aria-label="Dataset Mode">
-            <button id="btn-mode-live" class="btn-mode active" type="button">🛰️ Live Telemetry (03 Oct 2026)</button>
-            <button id="btn-mode-replay" class="btn-mode" type="button">🔥 Peak Replay (01 Nov 2024)</button>
-          </div>
-          <!-- Rectangular Mode Purpose Hover Box -->
-          <div id="mode-info-popup" class="mode-info-popup">
-            <div class="mode-info-header">
-              <strong>💡 DATASET MODE PURPOSE</strong>
-            </div>
-            <div class="mode-info-body">
-              <div class="mode-info-item">
-                <div class="mode-info-title live-title">🛰️ LIVE TELEMETRY MODE (03 OCT 2026)</div>
-                <p><strong>PURPOSE:</strong> Real-time tracking of active stubble fires using <strong>NASA VIIRS satellites</strong> + <strong>Open-Meteo live wind forecasts</strong>.</p>
-              </div>
-              <div class="mode-info-divider"></div>
-              <div class="mode-info-item">
-                <div class="mode-info-title replay-title">🔥 PEAK REPLAY MODE (01 NOV 2024)</div>
-                <p><strong>PURPOSE:</strong> Replays annual peak burning episode (<strong>179 verified fires in Punjab & Haryana</strong>) for severe smoke plume analysis and model validation.</p>
-              </div>
-            </div>
-          </div>
+      <nav class="main-nav" aria-label="Main">
+        <div class="nav-links" id="desktop-nav">
+          <a href="#stats" class="nav-link active" aria-current="page">Overview</a>
+          <a href="#cities" class="nav-link">City Threat</a>
+          <a href="#map-section" class="nav-link">Corridor Map</a>
+          <a href="#evaluation" class="nav-link">Validation</a>
+          <a href="#docs" class="nav-link">Architecture</a>
         </div>
-        <div id="mode-badge" class="mode-badge loading">
-          <span class="pulse-dot"></span>
-          <span id="mode-text">Loading telemetry...</span>
+      </nav>
+
+      <div class="header-actions">
+        <div class="mode-switcher" role="group" aria-label="Dataset Mode Switcher">
+          <button id="btn-mode-live" class="btn-cta active" type="button">Live Telemetry (03 Oct 2026)</button>
+          <button id="btn-mode-replay" class="btn-cta btn-outline" type="button">Peak Replay (01 Nov 2024)</button>
         </div>
-        <div class="last-updated" id="last-updated">Updating...</div>
+
+        <div id="mode-badge" class="mode-badge live">
+          <span class="status-dot"></span>
+          <span id="mode-text">LIVE TELEMETRY • 03 OCT 2026</span>
+        </div>
+
+        <button class="mobile-toggle" id="mobile-toggle-btn" type="button" aria-label="Toggle Navigation" aria-expanded="false" aria-controls="mobile-nav-panel">
+          <svg class="hamburger-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="6" x2="20" y2="6"></line>
+            <line x1="4" y1="12" x2="20" y2="12"></line>
+            <line x1="4" y1="18" x2="20" y2="18"></line>
+          </svg>
+        </button>
       </div>
     </div>
 
-    <!-- Transparent Honesty Banner -->
+    <!-- Mobile Navigation Drawer -->
+    <div class="mobile-nav-panel" id="mobile-nav-panel" aria-hidden="true">
+      <nav aria-label="Mobile">
+        <a href="#stats" class="mobile-nav-link active" aria-current="page">Overview</a>
+        <a href="#cities" class="mobile-nav-link">City Threat</a>
+        <a href="#map-section" class="mobile-nav-link">Corridor Map</a>
+        <a href="#evaluation" class="mobile-nav-link">Validation</a>
+        <a href="#docs" class="mobile-nav-link">Architecture</a>
+      </nav>
+    </div>
+
+    <!-- Honesty Banner -->
     <div class="honesty-banner">
       <div class="banner-inner">
-        <span class="warning-icon">ℹ️</span>
+        <span class="banner-label">Method Disclosure</span>
         <span class="banner-text">
-          <strong>Honesty Disclosure:</strong> Risk score is a transparent heuristic estimate, not a forecast guarantee.
-          Smoke arrival uses first-order surface winds at the target city.
+          Risk score is a transparent heuristic estimate. Smoke arrival calculations utilize first-order surface wind vectors.
         </span>
+        <span id="last-updated" class="last-updated-tag"><strong>Live Stream:</strong> 03 Oct 2026, 06:30 AM IST</span>
       </div>
     </div>
   </header>
 
   <main class="main-content">
     <!-- Top Summary Statistics Bar -->
-    <section class="stats-bar" aria-label="Key telemetry stats">
+    <section id="stats" class="stats-bar" aria-label="Key telemetry stats">
       <div class="stat-card">
         <div class="stat-label">48h Active Fires</div>
         <div class="stat-value" id="stat-fires-count">--</div>
@@ -89,7 +98,7 @@
       <div class="stat-card">
         <div class="stat-label">Active Risk Cells</div>
         <div class="stat-value" id="stat-cells-count">--</div>
-        <div class="stat-caption">0.1° (~10 km) resolution</div>
+        <div class="stat-caption">0.1° (~10 km) grid</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Max Risk Score</div>
@@ -104,10 +113,12 @@
     </section>
 
     <!-- City Smoke Threat Cards Grid -->
-    <section class="cities-section" aria-label="Target city smoke warnings">
+    <section id="cities" class="cities-section" aria-label="Target city smoke warnings">
       <div class="section-title-row">
-        <h2>Delhi Smoke Arrival Forecasts & Monitoring Sectors</h2>
-        <span class="section-hint">Click any Delhi sector to visualize upwind smoke plume trajectories from Punjab & Haryana</span>
+        <div>
+          <h2>Delhi Smoke Influx & Sector Forecasts</h2>
+          <p class="section-subtitle">Select any monitoring sector to inspect upwind smoke transport trajectories from Punjab & Haryana.</p>
+        </div>
       </div>
       <div class="city-cards-grid" id="city-cards-container">
         <!-- Rendered dynamically by app.js -->
@@ -116,44 +127,42 @@
     </section>
 
     <!-- Interactive Map & Controls Section -->
-    <section class="map-section" aria-label="Geospatial Map">
+    <section id="map-section" class="map-section" aria-label="Geospatial Map">
       <div class="map-card-wrapper">
         <div class="map-toolbar">
           <div class="toolbar-title">
-            <span class="map-icon">🛰️</span>
-            <div>
-              <span>Punjab & Haryana Fire Risk Corridor</span>
-              <span class="map-subtitle"> • 💡 Click anywhere on the map to analyze custom coordinates</span>
-            </div>
+            <span class="toolbar-heading">Punjab & Haryana Stubble Fire Corridor</span>
+            <span class="toolbar-subtext">Click any point on the map to evaluate custom location arrival vectors</span>
           </div>
           <div class="map-layer-controls">
             <div class="basemap-selector-group">
-              <span class="selector-label">Map Style:</span>
+              <span class="selector-label">Base Layer:</span>
               <select id="select-basemap" class="basemap-select" title="Choose basemap layer">
-                <option value="google_hybrid" selected>🛰️ Google Hybrid (Satellite + Roads)</option>
-                <option value="google_roadmap">🗺️ Google Maps (Standard)</option>
-                <option value="dark_canvas">🌙 Sleek Dark Mode</option>
-                <option value="esri_satellite">🌐 Esri High-Res Satellite</option>
-                <option value="google_terrain">🏔️ Google Terrain</option>
+                <option value="google_hybrid" selected>Google Hybrid (Satellite)</option>
+                <option value="google_roadmap">Google Maps (Standard)</option>
+                <option value="osm">OpenStreetMap</option>
+                <option value="dark_canvas">Dark Gray Canvas</option>
+                <option value="esri_satellite">Esri Satellite</option>
+                <option value="google_terrain">Google Terrain</option>
               </select>
             </div>
             <div class="basemap-selector-group">
-              <span class="selector-label">📍 Delhi Location:</span>
+              <span class="selector-label">Delhi Location:</span>
               <select id="select-custom-town" class="basemap-select" title="Analyze smoke arrival for specific Delhi locations">
-                <option value="" disabled selected>Click Map or Select Delhi Locality...</option>
-                <option value="28.6304,77.2177">Connaught Place (Central Delhi)</option>
-                <option value="28.6502,77.3150">Anand Vihar (East Delhi)</option>
-                <option value="28.7495,77.0667">Rohini (North Delhi)</option>
-                <option value="28.5823,77.0500">Dwarka (West Delhi)</option>
-                <option value="28.5244,77.2066">Saket (South Delhi)</option>
+                <option value="" disabled selected>Select Delhi Locality...</option>
+                <option value="28.6304,77.2177">Connaught Place (Central)</option>
+                <option value="28.6502,77.3150">Anand Vihar (East)</option>
+                <option value="28.7495,77.0667">Rohini (North)</option>
+                <option value="28.5823,77.0500">Dwarka (West)</option>
+                <option value="28.5244,77.2066">Saket (South)</option>
                 <option value="28.5562,77.0999">IGI Airport (Terminal 3)</option>
-                <option value="28.5494,77.2001">Hauz Khas (South Delhi)</option>
+                <option value="28.5494,77.2001">Hauz Khas (South)</option>
                 <option value="28.6562,77.2410">Chandni Chowk (Old Delhi)</option>
-                <option value="28.6517,77.1906">Karol Bagh (Central Delhi)</option>
-                <option value="28.5700,77.2400">Lajpat Nagar (South Delhi)</option>
-                <option value="28.6219,77.0878">Janakpuri (West Delhi)</option>
-                <option value="28.6978,77.1406">Pitampura (North West Delhi)</option>
-                <option value="28.6692,77.2800">Shahdara (North East Delhi)</option>
+                <option value="28.6517,77.1906">Karol Bagh (Central)</option>
+                <option value="28.5700,77.2400">Lajpat Nagar (South)</option>
+                <option value="28.6219,77.0878">Janakpuri (West)</option>
+                <option value="28.6978,77.1406">Pitampura (North West)</option>
+                <option value="28.6692,77.2800">Shahdara (North East)</option>
               </select>
             </div>
             <div class="filter-pill-group">
@@ -174,56 +183,58 @@
             <label class="toggle-pill">
               <input type="checkbox" id="toggle-fires" checked>
               <span class="pill-slider"></span>
-              <span>Thermal Points</span>
+              <span>Fire Points</span>
             </label>
             <label class="toggle-pill">
               <input type="checkbox" id="toggle-trajectories" checked>
               <span class="pill-slider"></span>
               <span>Smoke Vectors</span>
             </label>
-            <button id="btn-reset-map" class="btn-tool" title="Reset Map View">🎯 Center View</button>
-            <button id="btn-clear-custom" class="btn-tool" type="button" style="display:none;" title="Clear Custom Location Marker">❌ Clear Pin</button>
+            <button id="btn-reset-map" class="btn-tool" type="button" title="Reset Map View">Center View</button>
+            <button id="btn-clear-custom" class="btn-tool btn-outline" type="button" style="display:none;" title="Clear Custom Location Marker">Clear Pin</button>
           </div>
         </div>
 
         <div id="map" class="map-canvas"></div>
 
-        <!-- Floating Map Legend -->
+        <!-- Map Legend -->
         <div class="map-legend-overlay">
           <div class="legend-header">Map Legend</div>
           <div class="legend-group">
-            <span class="legend-label">Stubble Burn Risk (0 - 100)</span>
+            <span class="legend-label">Stubble Risk (0 - 100)</span>
             <div class="risk-gradient-bar"></div>
             <div class="legend-ticks">
               <span>0 (Low)</span>
               <span>50</span>
-              <span>100 (Extreme)</span>
+              <span>100 (High)</span>
             </div>
           </div>
           <div class="legend-divider"></div>
           <div class="legend-items">
             <div class="legend-item">
               <span class="sym-fire"></span>
-              <span>VIIRS Active Fire (size = FRP)</span>
+              <span>VIIRS Fire Point (Size = FRP)</span>
             </div>
             <div class="legend-item">
               <span class="sym-city"></span>
-              <span>Target City Center</span>
+              <span>Monitoring Location</span>
             </div>
             <div class="legend-item">
               <span class="sym-trajectory"></span>
-              <span>Upwind Smoke Transport Vector</span>
+              <span>Upwind Smoke Vector</span>
             </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Dynamic Delhi NCR Smoke Threat Profile Graph -->
-    <section class="telemetry-graph-section" aria-label="Delhi NCR Threat Profile Graph">
+    <!-- Dynamic Telemetry Graph Section -->
+    <section class="telemetry-graph-section" aria-label="Delhi Sector Threat Comparison">
       <div class="section-title-row">
-        <h2>Delhi & NCR Smoke Influx & Threat Profile</h2>
-        <span class="section-hint" id="graph-mode-hint">Live comparison across Delhi monitoring sectors</span>
+        <div>
+          <h2>Sector Threat Comparison</h2>
+          <p class="section-subtitle" id="graph-mode-hint">Live comparison across Delhi monitoring sectors</p>
+        </div>
       </div>
       <div class="graph-card">
         <div class="graph-header-row">
@@ -240,16 +251,15 @@
       </div>
     </section>
 
-    <!-- Scientific Back-Test Validation & Chart Section -->
-    <section class="evaluation-section" aria-label="Back-test Evaluation">
+    <!-- Back-Test Evaluation Section -->
+    <section id="evaluation" class="evaluation-section" aria-label="Back-test Evaluation">
       <div class="eval-grid">
         <div class="eval-text-panel">
           <div class="eval-badge">Empirical Validation</div>
-          <h2>Leave-One-Year-Out Back-Test</h2>
+          <h2>Leave-One-Year-Out Evaluation</h2>
           <p class="eval-intro">
-            To prevent overfitting and prove credibility, Saans was rigorously back-tested across
-            <strong>22 test days</strong> spanning peak burning seasons (Oct 20 – Nov 20) in 2024 and 2025.
-            For each test day, the target test year was completely excluded from the climatology index.
+            To evaluate prediction accuracy, Breathe Ahead was back-tested across <strong>22 test days</strong> during peak burning seasons (Oct 20 – Nov 20) in 2024 and 2025.
+            Each test year was excluded from the historical climatology index during evaluation.
           </p>
 
           <div class="eval-table-wrapper">
@@ -264,10 +274,10 @@
               </thead>
               <tbody id="backtest-table-body">
                 <tr class="highlight-row">
-                  <td><strong>Saans Combined (Ours)</strong></td>
+                  <td><strong>Breathe Ahead Combined Model</strong></td>
                   <td><span class="metric-pill">37.7%</span></td>
                   <td><span class="metric-pill">37.0%</span></td>
-                  <td>History prior + 48h spatial diffusion</td>
+                  <td>Historical prior + 48h spatial diffusion</td>
                 </tr>
                 <tr>
                   <td>Yesterday's Fires (Persistence)</td>
@@ -286,83 +296,72 @@
           </div>
 
           <div class="eval-insight-box">
-            <strong>Key Finding:</strong> Raw persistence ("Yesterday's fires") suffers severely (24.6% precision)
-            because farmers shift burning fields once harvesting completes. Saans combines historical agricultural
-            cycles with recent neighborhood ignition diffusion, delivering far more reliable spatial coverage.
+            <strong>Key Finding:</strong> Simple persistence ("Yesterday's fires") yields 24.6% precision because burning shifts spatially as harvest progresses across districts. Combining multi-year seasonal priors with recent neighborhood ignition diffusion yields superior spatial coverage.
           </div>
         </div>
 
         <div class="eval-chart-panel">
           <div class="chart-header">
-            <h3>Method Performance Comparison (@50 cells)</h3>
+            <h3>Method Performance (@50 cells)</h3>
             <span class="chart-tag">Generated by scripts/backtest.py</span>
           </div>
           <div class="chart-container">
             <img src="data/backtest.png"
-              alt="Saans Back-test precision and recall chart comparing combined model against persistence and history baselines"
+              alt="Breathe Ahead Back-test precision and recall chart comparing combined model against persistence and history baselines"
               class="backtest-img" id="backtest-img">
           </div>
         </div>
       </div>
     </section>
 
-    <!-- How It Works & Limitations Section -->
-    <section class="docs-section" aria-label="System Documentation">
+    <!-- Architecture & Limitations Section -->
+    <section id="docs" class="docs-section" aria-label="System Documentation">
       <div class="section-title-row">
-        <h2>Architecture & Methodological Rigor</h2>
-        <span class="section-hint">Transparent formulation with zero black-box obscurity</span>
+        <div>
+          <h2>System Architecture & Methodology</h2>
+          <p class="section-subtitle">Explicit mathematical formulation with transparent parameters</p>
+        </div>
       </div>
 
       <div class="docs-cards-grid">
         <div class="doc-card">
-          <div class="doc-icon">🛰️</div>
-          <h3>1. NASA FIRMS VIIRS Ingestion</h3>
+          <div class="doc-step-num">01</div>
+          <h3>NASA FIRMS VIIRS Ingestion</h3>
           <p>
-            Thermal radiation detections from the SNPP / NOAA-20 VIIRS instruments (375-meter nadir resolution).
-            We ingest nominal and high-confidence detections, capturing coordinates, acquisition timestamp, and Fire
-            Radiative Power (FRP in MW).
+            Thermal anomaly observations from SNPP and NOAA-20 VIIRS sensors (375m nadir resolution).
+            Processes nominal and high-confidence detections, extracting spatial coordinates, timestamps, and Fire Radiative Power (FRP in MW).
           </p>
         </div>
 
         <div class="doc-card">
-          <div class="doc-icon">📐</div>
-          <h3>2. Spatial Grid Risk Scoring</h3>
+          <div class="doc-step-num">02</div>
+          <h3>Spatial Risk Formulation</h3>
           <p>
-            Punjab and Haryana are partitioned into 0.1° (~10 km) cells. The risk score combines:
-            <br>• <strong>Historical Climatology:</strong> Normalized fire density within ±7 days of current season day
-            across 5 years.
-            <br>• <strong>Neighborhood Diffusion:</strong> Fires in the cell + 8 adjacent cells over 48h, weighted by
-            FRP ($1 + \text{FRP}/50$, capped at 3).
+            Partitioned into a 0.1° (~10 km) resolution grid covering Punjab and Haryana.
+            Combines multi-year historical fire density (±7 day seasonal window) with 48-hour neighborhood diffusion weighted by log-scale FRP.
           </p>
         </div>
 
         <div class="doc-card">
-          <div class="doc-icon">💨</div>
-          <h3>3. Smoke Arrival ETA & Level</h3>
+          <div class="doc-step-num">03</div>
+          <h3>Smoke Transport & Arrival ETA</h3>
           <p>
-            Using Open-Meteo 10m wind direction, we identify upwind fire clusters within 600 km.
-            Cluster travel times ($D / V_{\text{wind}}$) are aggregated via an FRP-weighted median to estimate city
-            arrival hours. Threat levels are classified as LOW, MODERATE, HIGH, or STAGNANT.
+            Identifies upwind fire clusters within 600 km using surface wind vectors.
+            Calculates transport time ($D / V_{\text{wind}}$) using FRP-weighted median aggregation to compute city-level threat scores and arrival ETAs.
           </p>
         </div>
       </div>
 
-      <!-- Explicit Honest Limitations Accordion -->
+      <!-- Limitations Card -->
       <div class="limitations-box">
         <div class="lim-header">
-          <span class="lim-icon">⚠️</span>
-          <h3>Explicit Limitations & Non-Claims</h3>
+          <h3>Known Scope & Limitations</h3>
         </div>
         <ul class="lim-list">
-          <li><strong>Satellite Pass Frequency:</strong> VIIRS passes over northern India roughly twice daily. Fires
-            ignited between overpasses or obscured by thick cloud cover will experience delayed reporting.</li>
-          <li><strong>Heuristic Formula:</strong> The risk score is an uncalibrated heuristic combining spatial and
-            seasonal priors; it is not a machine-learned atmospheric dispersion model (like HYSPLIT).</li>
-          <li><strong>First-Order Wind Transport:</strong> Arrival ETA assumes uniform straight-line travel using city
-            surface winds. Real smoke transport is governed by planetary boundary layer heights and multi-level wind
-            shear.</li>
-          <li><strong>Threshold Calibration:</strong> Threat level cutoff values (50 and 200) are empirically chosen for
-            operational triage and remain open to calibration against ground PM2.5 sensors.</li>
+          <li><strong>Satellite Overpass Intervals:</strong> VIIRS sensors observe northern India twice daily. Ignitions between passes or under thick cloud cover have delayed detection.</li>
+          <li><strong>Heuristic Estimation:</strong> The risk score combines empirical spatial and seasonal priors; it is not a full 3D atmospheric dispersion model (e.g. HYSPLIT).</li>
+          <li><strong>First-Order Wind Transport:</strong> Arrival ETA assumes linear trajectory from surface wind vectors. Boundary layer dynamics and multi-level shear are simplified.</li>
+          <li><strong>Threat Thresholds:</strong> Operational threat levels (50 and 200) serve triage purposes and are tuned against historical plume events.</li>
         </ul>
       </div>
     </section>
@@ -371,20 +370,19 @@
   <footer class="app-footer">
     <div class="footer-inner">
       <div class="footer-left">
-        <strong>Saans</strong> — Open Environmental Intelligence for Clean Air.
-        <span>Environmental Hacks • Track: Air</span>
+        <strong>Breathe Ahead</strong> — Open Environmental Intelligence for Clean Air
       </div>
       <div class="footer-right">
-        <span>Powered by NASA FIRMS & Open-Meteo</span>
-        <span>Built on AWS Serverless</span>
+        <span>Data: NASA FIRMS & Open-Meteo</span>
+        <span>Architected on AWS Serverless</span>
       </div>
     </div>
   </footer>
 
-  <!-- Leaflet JS from CDN -->
+  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script src="app.js?v=9"></script>
+  <script src="app.js?v=11"></script>
 </body>
 
 </html>
