@@ -1,5 +1,5 @@
 /**
- * Saans (साँस) — Frontend Application Logic
+ * BreathAhead — Frontend Application Logic
  * Pure Vanilla JavaScript + Leaflet.js
  */
 
@@ -237,6 +237,21 @@ function setupEventListeners() {
         currentBaseLayer = baseLayers[selectedKey];
         currentBaseLayer.addTo(map);
       }
+    });
+  }
+
+  // City Sector Search & Dropdown Selectors
+  const citySearchInput = document.getElementById("input-city-search");
+  if (citySearchInput) {
+    citySearchInput.addEventListener("input", (e) => {
+      filterCitiesBySearch(e.target.value);
+    });
+  }
+
+  const cityDropdownSelect = document.getElementById("select-city-dropdown");
+  if (cityDropdownSelect) {
+    cityDropdownSelect.addEventListener("change", (e) => {
+      selectCity(e.target.value);
     });
   }
 
@@ -518,80 +533,357 @@ function renderHeaderAndStats(data) {
 }
 
 /**
- * Render City Threat Cards
+ * Render City Threat Section (Spotlight Hero Card + Quick Chips + Compact Searchable Grid)
  */
 function renderCityCards(cities) {
+  if (!cities || cities.length === 0) return;
+
+  const validCities = cities.filter(
+    (c) => c.city !== "Delhi" && (c.city.includes("Delhi") || c.city.includes("NCR"))
+  );
+
+  // 1. Populate Dropdown Options
+  const dropdown = document.getElementById("select-city-dropdown");
+  if (dropdown) {
+    dropdown.innerHTML = "";
+    validCities.forEach((c) => {
+      const opt = document.createElement("option");
+      opt.value = c.city;
+      opt.textContent = `📍 ${c.city}`;
+      if (c.city === activeCityName) opt.selected = true;
+      dropdown.appendChild(opt);
+    });
+  }
+
+  // 2. Populate Quick-Select Sector Chips Strip
+  const chipsContainer = document.getElementById("sector-chips-container");
+  if (chipsContainer) {
+    chipsContainer.innerHTML = "";
+    validCities.forEach((c) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = `sector-chip ${c.city === activeCityName ? "active" : ""}`;
+      chip.innerHTML = `<span>${c.city}</span> <span class="level-badge ${c.level}" style="padding: 1px 6px; font-size: 0.68rem;">${c.level}</span>`;
+      chip.addEventListener("click", () => {
+        selectCity(c.city);
+      });
+      chipsContainer.appendChild(chip);
+    });
+  }
+
+  // 3. Render Spotlight Hero Card
+  const activeCityData = validCities.find((c) => c.city === activeCityName) || validCities[0];
+  if (activeCityData) {
+    activeCityName = activeCityData.city;
+    renderSpotlightCard(activeCityData);
+  }
+
+  // 4. Render Compact Sector Grid (Filterable)
+  renderCompactCards(validCities);
+}
+
+/**
+ * Render Hero Spotlight Dashboard Card for the actively selected Delhi sector
+ */
+function renderSpotlightCard(c) {
+  const container = document.getElementById("sector-spotlight-container");
+  if (!container || !c) return;
+
+  const etaText = c.eta_hours !== null ? `~${c.eta_hours} hours` : (c.level === "STAGNANT" ? "Stagnant (Calm Winds)" : "N/A (Upwind Clear)");
+  const windSpeed = c.wind ? c.wind.speed_kmh.toFixed(1) : "0.0";
+  const windInfo = c.wind ? getWindFlowInfo(c.wind.from_deg) : getWindFlowInfo(0);
+  const headline = `Smoke traversing from <strong>${c.upwind_fire_count} upwind farm fires</strong> across Punjab & Haryana, estimated arrival in <strong>${etaText}</strong> with threat score <strong>${c.score.toFixed(1)}</strong>.`;
+
+  container.innerHTML = `
+    <div class="spotlight-header">
+      <div class="spotlight-title-group">
+        <span class="spotlight-city-name">${c.city}</span>
+        <span class="level-badge ${c.level}">${c.level} RISK</span>
+      </div>
+      <button class="btn-inspect-trajectories" type="button">🎯 Trace Vectors on Map</button>
+    </div>
+
+    <p class="spotlight-headline">${headline}</p>
+
+    <div class="spotlight-grid">
+      <div class="spotlight-metric-item">
+        <span class="spotlight-metric-label">Estimated Arrival (ETA)</span>
+        <span class="spotlight-metric-val">${etaText}</span>
+      </div>
+      <div class="spotlight-metric-item">
+        <span class="spotlight-metric-label">Upwind Fire Sources</span>
+        <span class="spotlight-metric-val" style="color: #ff3366;">${c.upwind_fire_count} fires</span>
+      </div>
+      <div class="spotlight-metric-item">
+        <span class="spotlight-metric-label">Smoke Threat Score</span>
+        <span class="spotlight-metric-val" style="color: #00f0ff;">${c.score.toFixed(1)} pts</span>
+      </div>
+      <div class="spotlight-metric-item">
+        <span class="spotlight-metric-label">Primary Cluster Distance</span>
+        <span class="spotlight-metric-val">${c.top_sources && c.top_sources.length > 0 ? `${c.top_sources[0].distance_km.toFixed(0)} km` : "Clear"}</span>
+      </div>
+    </div>
+
+    <div class="spotlight-footer">
+      <div class="spotlight-wind-info">
+        <span class="compass-arrow-badge" style="transform: rotate(${windInfo.arrowDeg}deg); transition: transform 0.4s ease;">
+          <span style="font-weight:900; color:#00f0ff; font-size:0.95rem; line-height:1;">⬆</span>
+        </span>
+        <span><strong>Surface Wind:</strong> ${windSpeed} km/h &bull; Flowing from ${windInfo.fromDeg}° (${windInfo.shortLabel}) toward ${windInfo.toDeg}°</span>
+      </div>
+      <div style="font-size: 0.8rem; color: var(--text-dim);">
+        Coordinates: ${c.lat ? c.lat.toFixed(4) : 28.6139}°N, ${c.lon ? c.lon.toFixed(4) : 77.2090}°E
+      </div>
+    </div>
+  `;
+
+  const btnInspect = container.querySelector(".btn-inspect-trajectories");
+  if (btnInspect) {
+    btnInspect.addEventListener("click", () => {
+      const mapElem = document.getElementById("map-section");
+      if (mapElem) mapElem.scrollIntoView({ behavior: "smooth" });
+      drawTrajectories(c);
+    });
+  }
+
+  // Render Action Playbook for this sector
+  renderActionPlaybook(c);
+}
+
+/**
+ * Render Action & Exposure Playbook Hub for schools, households, vulnerable citizens, and municipal response
+ */
+function renderActionPlaybook(c) {
+  const container = document.getElementById("playbook-cards-grid");
+  const statusBadge = document.getElementById("playbook-sector-status");
+  const playbookTitle = document.getElementById("playbook-title");
+  if (!container || !c) return;
+
+  const score = c.score || 0;
+  const level = c.level || "LOW";
+  const etaHours = c.eta_hours;
+  const upwindFires = c.upwind_fire_count || 0;
+  const etaText = etaHours !== null ? `~${etaHours} hours` : (level === "STAGNANT" ? "Stagnant (Calm Winds)" : "N/A (Upwind Clear)");
+
+  if (playbookTitle) {
+    playbookTitle.textContent = `${c.city} — Sector Protection & Action Playbook`;
+  }
+
+  // Determine overall status tag
+  let statusClass = "status-low";
+  let statusText = "🟢 Normal Operational State";
+  if (level === "HIGH" || score >= 200) {
+    statusClass = "status-high";
+    statusText = `🚨 Code Red Influx Alert (${upwindFires} Upwind Fires &bull; ETA: ${etaText})`;
+  } else if (level === "MODERATE" || score >= 50) {
+    statusClass = "status-moderate";
+    statusText = `⚠️ Moderate Advisory Active (${upwindFires} Fires &bull; ETA: ${etaText})`;
+  } else if (level === "STAGNANT") {
+    statusClass = "status-stagnant";
+    statusText = "🔵 Stagnant Calm Wind Notice";
+  }
+
+  if (statusBadge) {
+    statusBadge.className = `playbook-status-badge ${statusClass}`;
+    statusBadge.innerHTML = statusText;
+  }
+
+  // 1. School Safety Advisory
+  let schoolBadge = "🟢 REGULAR SCHEDULE";
+  let schoolBadgeClass = "badge-low";
+  let schoolActions = [
+    "Outdoor morning assemblies permitted under standard guidelines.",
+    "Monitor afternoon wind shifts for changing upwind trajectories.",
+    "Ensure school clinic has basic first-aid for sensitive students."
+  ];
+
+  if (level === "HIGH" || score >= 200) {
+    schoolBadge = "🚨 CODE RED: EMERGENCY PROTOCOL";
+    schoolBadgeClass = "badge-high";
+    schoolActions = [
+      `<strong>Shift Primary Classes (1–5) to Hybrid / Online:</strong> Send parental notification 12h in advance (Arrival ETA: ${etaText}).`,
+      "<strong>Cancel All Outdoor Assemblies & PE:</strong> Strictly prohibit open-air sports during peak smoke transit.",
+      "<strong>Activate Classroom HEPA Units:</strong> Pre-scrub indoor air 2 hours before estimated arrival.",
+      "<strong>Mandatory Masking on School Transit:</strong> Ensure N95/FFP2 masks for students traveling via open school buses / vans."
+    ];
+  } else if (level === "MODERATE" || score >= 50) {
+    schoolBadge = "⚠️ CODE ORANGE: RESTRICTED ACTIVITY";
+    schoolBadgeClass = "badge-moderate";
+    schoolActions = [
+      "<strong>Move Morning Assembly Indoors:</strong> Limit prolonged outdoor gatherings before 10 AM.",
+      "<strong>Exempt Asthmatic / Sensitive Students:</strong> Allow indoor library recreation during physical education periods.",
+      "<strong>Pre-Seal Classroom Doors & Windows:</strong> Minimize draft ingress during upwind smoke transit window."
+    ];
+  }
+
+  // 2. Indoor Air Quality & Filtration Playbook
+  let indoorBadge = "🟢 CLEAN AIR WINDOW";
+  let indoorBadgeClass = "badge-low";
+  let indoorActions = [
+    "Safe window ventilation period while upwind transport remains low.",
+    "Standard HEPA purifier maintenance and background filtration.",
+    "Check indoor PM2.5 levels periodically."
+  ];
+
+  if (level === "HIGH" || score >= 200) {
+    indoorBadge = "🚨 PRE-SEAL & PURIFY NOW";
+    indoorBadgeClass = "badge-high";
+    indoorActions = [
+      `<strong>HEPA Pre-Purification Window:</strong> Turn indoor air purifiers to MAX speed <strong>2 hours prior to arrival (ETA: ${etaText})</strong> to lower baseline indoor PM2.5.`,
+      "<strong>Total Window Lockdown:</strong> Tightly seal north-west facing windows and balcony sliders to prevent toxic plume infiltration.",
+      "<strong>Avoid Indoor Pollutant Creation:</strong> Prohibit indoor frying, vacuuming without HEPA exhaust, or lighting incense/candles during smoke surge.",
+      "<strong>Create Clean Room Sanctuary:</strong> Designate a central bedroom with door draft-stoppers and continuous filtration."
+    ];
+  } else if (level === "MODERATE" || score >= 50) {
+    indoorBadge = "⚠️ ADVISORY FILTRATION";
+    indoorBadgeClass = "badge-moderate";
+    indoorActions = [
+      `<strong>Timed Ventilation:</strong> Close windows by estimated arrival (~${etaText}). Ventilate briefly only during clean upwind intervals.`,
+      "<strong>Run Air Purifiers on Auto/Medium:</strong> Ensure filters are clean and pre-filters washed.",
+      "<strong>Wet-Mopping Strategy:</strong> Use damp micro-fiber cloths for dusting to prevent PM2.5 re-suspension."
+    ];
+  }
+
+  // 3. Vulnerable Groups & Exposure Mitigation
+  let vulnBadge = "🟢 ROUTINE MONITORING";
+  let vulnBadgeClass = "badge-low";
+  let vulnActions = [
+    "Elderly and children can conduct regular outdoor walks during daylight hours.",
+    "Maintain standard hydration and general respiratory health."
+  ];
+
+  if (level === "HIGH" || score >= 200) {
+    vulnBadge = "🚨 STRICT EXPOSURE CAPS";
+    vulnBadgeClass = "badge-high";
+    vulnActions = [
+      "<strong>Elderly & Asthmatics:</strong> Strictly avoid morning walks and outdoor exercise; keep bronchodilators / rescue inhalers readily accessible.",
+      "<strong>Outdoor Gig & Construction Workers:</strong> Enforce N95 / FFP2 mask mandates; cap outdoor continuous exertion shifts to < 45 minutes with indoor respite stations.",
+      "<strong>Expecting Mothers & Infants:</strong> Remain in indoor purified spaces with sealed double-pane barriers during plume passage.",
+      "<strong>Cardiovascular Care:</strong> Avoid strenuous physical exertion that increases minute ventilation and particulate lung deposition."
+    ];
+  } else if (level === "MODERATE" || score >= 50) {
+    vulnBadge = "⚠️ TARGETED PRECAUTIONS";
+    vulnBadgeClass = "badge-moderate";
+    vulnActions = [
+      "<strong>Sensitive Individuals:</strong> Limit strenuous outdoor cardio; shift workouts to indoor filtered spaces.",
+      "<strong>Commuters:</strong> Wear well-fitted N95 masks during peak morning/evening traffic corridors.",
+      "<strong>Hydration:</strong> Maintain adequate fluid intake to support mucociliary respiratory clearance."
+    ];
+  }
+
+  // 4. Pre-Emptive City & Policy Interventions (GRAP)
+  let grapBadge = level === "HIGH" ? "🚨 PRE-EMPTIVE GRAP IV" : (level === "MODERATE" ? "⚠️ GRAP II / III PREPAREDNESS" : "🟢 STAGE I MONITORING");
+  let grapBadgeClass = level === "HIGH" ? "badge-high" : (level === "MODERATE" ? "badge-moderate" : "badge-low");
+  let grapActions = level === "HIGH" ? [
+    `<strong>Pre-Emptive Water Cannon Deployment:</strong> Dispatch anti-smog guns to ${c.city} key traffic junctions 12h ahead of arrival ETA.`,
+    "<strong>Targeted Commercial Truck Diversion:</strong> Re-route non-essential diesel freight trucks to Western/Eastern Peripheral Expressways.",
+    "<strong>Mandatory Construction Dust Halts:</strong> Issue immediate stop-work notices on open excavation and demolition."
+  ] : [
+    "Synchronize mechanical street sweepers along major arterial corridors.",
+    "Ensure un-interrupted power supply to prevent local diesel generator reliance.",
+    "Monitor cross-border transport vectors from Punjab and Haryana."
+  ];
+
+  container.innerHTML = `
+    <!-- Card 1: School Safety -->
+    <div class="playbook-card">
+      <div class="playbook-card-header">
+        <div class="playbook-card-title-group">
+          <span class="playbook-icon">🏫</span>
+          <div>
+            <h4>School & Student Safety</h4>
+            <span class="playbook-card-sub">Protocols for principals, teachers & parents</span>
+          </div>
+        </div>
+        <span class="playbook-mini-badge ${schoolBadgeClass}">${schoolBadge}</span>
+      </div>
+      <ul class="playbook-list">
+        ${schoolActions.map(a => `<li>${a}</li>`).join("")}
+      </ul>
+    </div>
+
+    <!-- Card 2: Indoor Air & Filtration -->
+    <div class="playbook-card">
+      <div class="playbook-card-header">
+        <div class="playbook-card-title-group">
+          <span class="playbook-icon">🏠</span>
+          <div>
+            <h4>Indoor Air & Filtration</h4>
+            <span class="playbook-card-sub">HEPA pre-scrubbing & window sealing guide</span>
+          </div>
+        </div>
+        <span class="playbook-mini-badge ${indoorBadgeClass}">${indoorBadge}</span>
+      </div>
+      <ul class="playbook-list">
+        ${indoorActions.map(a => `<li>${a}</li>`).join("")}
+      </ul>
+    </div>
+
+    <!-- Card 3: Vulnerable Groups -->
+    <div class="playbook-card">
+      <div class="playbook-card-header">
+        <div class="playbook-card-title-group">
+          <span class="playbook-icon">😷</span>
+          <div>
+            <h4>Vulnerable Population Health</h4>
+            <span class="playbook-card-sub">Elderly, children & outdoor gig workers</span>
+          </div>
+        </div>
+        <span class="playbook-mini-badge ${vulnBadgeClass}">${vulnBadge}</span>
+      </div>
+      <ul class="playbook-list">
+        ${vulnActions.map(a => `<li>${a}</li>`).join("")}
+      </ul>
+    </div>
+
+    <!-- Card 4: Pre-Emptive City Actions -->
+    <div class="playbook-card">
+      <div class="playbook-card-header">
+        <div class="playbook-card-title-group">
+          <span class="playbook-icon">🏛️</span>
+          <div>
+            <h4>Pre-Emptive City & GRAP Action</h4>
+            <span class="playbook-card-sub">Municipal interventions 12–24h prior to spike</span>
+          </div>
+        </div>
+        <span class="playbook-mini-badge ${grapBadgeClass}">${grapBadge}</span>
+      </div>
+      <ul class="playbook-list">
+        ${grapActions.map(a => `<li>${a}</li>`).join("")}
+      </ul>
+    </div>
+  `;
+}
+
+/**
+ * Render compact searchable micro-cards for quick overview of all Delhi sectors
+ */
+function renderCompactCards(cities, filterText = "") {
   const container = document.getElementById("city-cards-container");
+  if (!container) return;
   container.innerHTML = "";
 
-  if (!cities || cities.length === 0) {
-    container.innerHTML = "<p>No city smoke forecasts available.</p>";
+  const query = filterText.trim().toLowerCase();
+  const filtered = cities.filter((c) => c.city.toLowerCase().includes(query));
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div style="grid-column: 1/-1; padding: 16px; color: var(--text-dim); font-size: 0.86rem;">No Delhi sectors matching "${filterText}". Try "Rohini", "Saket", "Anand Vihar"...</div>`;
     return;
   }
 
-  cities.forEach((c) => {
+  filtered.forEach((c) => {
     const card = document.createElement("div");
-    card.className = `city-card ${c.city === activeCityName ? "active" : ""}`;
-    card.id = `card-city-${c.city.toLowerCase()}`;
+    card.className = `compact-city-card ${c.city === activeCityName ? "active" : ""}`;
     card.dataset.city = c.city;
 
-    const etaText = c.eta_hours !== null ? `~${c.eta_hours} hours` : (c.level === "STAGNANT" ? "Stagnant" : "N/A");
-    const headline = `${c.city}: smoke from <em>${c.upwind_fire_count} upwind fires</em>, estimated arrival in <em>${etaText}</em>, threat level <em>${c.level}</em>.`;
-
-    const windSpeed = c.wind ? c.wind.speed_kmh.toFixed(1) : "0.0";
-    const windInfo = c.wind ? getWindFlowInfo(c.wind.from_deg) : getWindFlowInfo(0);
+    const etaText = c.eta_hours !== null ? `ETA: ~${c.eta_hours}h` : "ETA: N/A";
 
     card.innerHTML = `
-      <div class="city-card-header">
-        <div class="city-name-group">
-          <span class="city-name">${c.city}</span>
-        </div>
-        <span class="level-badge ${c.level}">${c.level}</span>
+      <div>
+        <div class="compact-city-name">${c.city}</div>
+        <div class="compact-city-eta">${etaText} &bull; ${c.upwind_fire_count} upwind fires</div>
       </div>
-
-      <p class="city-headline">${headline}</p>
-
-      <div class="city-metrics">
-        <div class="metric-item">
-          <span class="metric-label">Estimated Arrival</span>
-          <span class="metric-val">${etaText}</span>
-        </div>
-        <div class="metric-item">
-          <span class="metric-label">Upwind Fires</span>
-          <span class="metric-val">${c.upwind_fire_count}</span>
-        </div>
-        <div class="metric-item">
-          <span class="metric-label">Smoke Threat Score</span>
-          <span class="metric-val">${c.score.toFixed(1)}</span>
-        </div>
-        <div class="metric-item">
-          <span class="metric-label">Top Cluster Dist</span>
-          <span class="metric-val">${c.top_sources && c.top_sources.length > 0 ? `${c.top_sources[0].distance_km.toFixed(0)} km` : "None"}</span>
-        </div>
-      </div>
-
-      <div class="city-wind-row">
-        <div class="wind-indicator" title="${windInfo.label}">
-          <span class="compass-arrow-badge" style="
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            background: #F0EEE8;
-            border: 1px solid #D6D3CC;
-            transform: rotate(${windInfo.arrowDeg}deg);
-            transition: transform 0.4s ease;
-            margin-right: 6px;
-            flex-shrink: 0;
-          ">
-            <span style="font-weight:700; color:#1E4620; font-size:0.75rem; line-height:1;">⬆</span>
-          </span>
-          <span><strong>Wind:</strong> ${windSpeed} km/h • ${windInfo.shortLabel}</span>
-        </div>
-        <button class="btn-inspect" type="button">Inspect</button>
-      </div>
+      <span class="level-badge ${c.level}">${c.level}</span>
     `;
 
     card.addEventListener("click", () => {
@@ -603,13 +895,39 @@ function renderCityCards(cities) {
 }
 
 /**
+ * Filter compact cards by search text
+ */
+function filterCitiesBySearch(text) {
+  if (!currentData || !currentData.cities) return;
+  const validCities = currentData.cities.filter(
+    (c) => c.city !== "Delhi" && (c.city.includes("Delhi") || c.city.includes("NCR"))
+  );
+  renderCompactCards(validCities, text);
+}
+
+/**
  * Handle city selection: highlight card and draw smoke vectors
  */
 function selectCity(cityName) {
   activeCityName = cityName;
 
-  // Update card active classes
-  document.querySelectorAll(".city-card").forEach((card) => {
+  // 1. Sync dropdown
+  const dropdown = document.getElementById("select-city-dropdown");
+  if (dropdown && dropdown.value !== cityName) {
+    dropdown.value = cityName;
+  }
+
+  // 2. Sync chips
+  document.querySelectorAll(".sector-chip").forEach((chip) => {
+    if (chip.textContent.includes(cityName)) {
+      chip.classList.add("active");
+    } else {
+      chip.classList.remove("active");
+    }
+  });
+
+  // 3. Sync compact cards
+  document.querySelectorAll(".compact-city-card").forEach((card) => {
     if (card.dataset.city === cityName) {
       card.classList.add("active");
     } else {
@@ -621,6 +939,7 @@ function selectCity(cityName) {
   const cityData = currentData.cities.find((c) => c.city === cityName);
   if (!cityData) return;
 
+  renderSpotlightCard(cityData);
   renderCities(currentData.cities);
   drawTrajectories(cityData);
 }
@@ -631,9 +950,13 @@ function selectCity(cityName) {
 function renderRiskCells(cells) {
   riskCellsLayer.clearLayers();
 
+  const validCells = (cells || []).filter((c) =>
+    isInPunjabHaryana(parseFloat(c.lat), parseFloat(c.lon))
+  );
+
   const halfCell = CELL_DEG / 2.0;
 
-  cells.forEach((c) => {
+  validCells.forEach((c) => {
     const south = c.lat - halfCell;
     const north = c.lat + halfCell;
     const west = c.lon - halfCell;
@@ -694,7 +1017,11 @@ function getRiskColor(risk) {
 function renderFires(fires) {
   firesLayer.clearLayers();
 
-  fires.forEach((f) => {
+  const validFires = (fires || []).filter((f) =>
+    isInPunjabHaryana(parseFloat(f.lat), parseFloat(f.lon))
+  );
+
+  validFires.forEach((f) => {
     const frp = f.frp || 10.0;
     const radius = Math.min(10, Math.max(3.5, Math.sqrt(frp) * 1.1));
 
@@ -737,7 +1064,11 @@ function renderFires(fires) {
 function renderCities(cities) {
   citiesLayer.clearLayers();
 
-  cities.forEach((c) => {
+  const validCities = (cities || []).filter(
+    (c) => c.city !== "Delhi" && (c.city.includes("Delhi") || c.city.includes("NCR"))
+  );
+
+  validCities.forEach((c) => {
     const pos = [c.lat || 28.6139, c.lon || 77.2090];
     if (!pos[0] || !pos[1]) return;
 
@@ -1248,7 +1579,9 @@ function renderTelemetryGraph() {
       : "Real-time ambient threat & wind conditions across Delhi sectors";
   }
 
-  const cities = currentData.cities.filter((c) => c.city !== "Delhi");
+  const cities = (currentData.cities || []).filter(
+    (c) => c.city !== "Delhi" && (c.city.includes("Delhi") || c.city.includes("NCR"))
+  );
   container.innerHTML = "";
 
   // Determine max value for the selected metric
