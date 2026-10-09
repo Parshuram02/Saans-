@@ -139,6 +139,7 @@ delhi/
 |
 |- .env                      Your secrets (GITIGNORED)
 |- .env.example              Template
+|- nginx.conf                Nginx web server configuration block
 |- requirements.txt          Offline + test dependencies
 |- Makefile                  Unix make targets
 |- make.bat                  Windows equivalent

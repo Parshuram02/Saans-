@@ -161,22 +161,161 @@ The map is built using **Leaflet.js** and requires no frontend build system.
 
 ---
 
-# ☁️ AWS Architecture
 
-| Component | Technology | Purpose |
-|---|---|---|
-| Fire Data | NASA FIRMS VIIRS | Satellite thermal detections |
-| Weather | Open-Meteo API | Wind speed and direction |
-| Compute | AWS Lambda | Data ingestion and processing |
-| Scheduling | Amazon EventBridge | Automated 3-hour ingestion |
-| Database | Amazon DynamoDB | Risk and smoke intelligence |
-| Historical Data | Amazon S3 | Historical fire index |
-| API | Amazon API Gateway | HTTP API |
-| Frontend | S3 / AWS Amplify | Web application hosting |
-| Map | Leaflet.js | Interactive geospatial visualization |
-| Deployment | AWS SAM | Infrastructure deployment |
 
----
+#  Deployment: Amazon EC2 + Nginx
+
+Besides the serverless SAM deployment, Saans can run on a single **Amazon EC2** instance, with **Nginx** serving the web dashboard. This is the simplest way to get a public demo online.
+
+```text
+User Browser
+     |
+     v   HTTP (port 80)
++----------------------------+
+|  Amazon EC2 (Ubuntu)       |
+|                            |
+|  Nginx  --> /var/www/saans |
+|  (serves index.html,       |
+|   app.js, styles.css)      |
+|                            |
+|  Python venv               |
+|  (pipeline scripts)        |
++----------------------------+
+```
+
+## What is Nginx?
+
+Nginx is a high-performance web server. It receives HTTP requests from browsers and returns the right file (such as `index.html`). Saans' frontend is static (HTML, CSS, vanilla JavaScript), so Nginx can serve it directly without a build step. Nginx can also act as a reverse proxy if a Python API is added later.
+
+## 1. Launch the EC2 instance
+
+- **AMI:** Ubuntu Server (22.04 or 24.04 LTS)
+- **Instance type:** `t2.micro` or `t3.micro` (free-tier eligible)
+- **Key pair:** create or select one and keep the `.pem` file safe
+- **Security group (inbound rules):**
+
+| Type | Port | Source | Purpose |
+|---|---|---|---|
+| SSH | 22 | My IP | Admin access |
+| HTTP | 80 | 0.0.0.0/0 | Public website |
+| HTTPS | 443 | 0.0.0.0/0 | Secure website (optional) |
+
+Outbound rules are left at the default (allow all) so the server can install packages and call the NASA FIRMS and Open-Meteo APIs. Do not expose port 8000 publicly.
+
+## 2. Connect to the instance
+
+```bash
+ssh -i /path/to/your-key.pem ubuntu@<EC2-PUBLIC-IP>
+```
+
+On Windows, if SSH reports "UNPROTECTED PRIVATE KEY FILE", restrict the key's permissions first:
+
+```cmd
+icacls "D:\your-key.pem" /inheritance:r
+icacls "D:\your-key.pem" /grant:r "%USERNAME%:R"
+```
+
+## 3. Install dependencies and get the code
+
+```bash
+sudo apt update && sudo apt install -y python3-pip python3-venv nginx git
+git clone <repo-url> saans
+cd saans
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env     # then add FIRMS_MAP_KEY
+```
+
+## 4. Publish the web dashboard with Nginx
+
+Copy the static site to Nginx's web root:
+
+```bash
+sudo mkdir -p /var/www/saans
+sudo cp -r ~/saans/web/* /var/www/saans/
+```
+
+Create the site config:
+
+```bash
+sudo nano /etc/nginx/sites-available/saans
+```
+
+```nginx
+server {
+    listen 80 default_server;
+    server_name _;
+
+    root /var/www/saans;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}
+```
+
+Enable it and reload Nginx:
+
+```bash
+sudo rm /etc/nginx/sites-enabled/default
+sudo ln -s /etc/nginx/sites-available/saans /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+Open `http://<EC2-PUBLIC-IP>` in a browser to see the dashboard.
+
+## 5. Updating the site
+
+Nginx serves the copy in `/var/www/saans`, so re-copy after pulling changes:
+
+```bash
+cd ~/saans && git pull
+sudo cp -r web/* /var/www/saans/
+```
+
+No Nginx reload is needed for static file changes.
+
+## Useful Nginx commands
+
+| Command | Purpose |
+|---|---|
+| `sudo nginx -t` | Test the configuration for errors |
+| `sudo systemctl reload nginx` | Apply config changes without downtime |
+| `sudo systemctl restart nginx` | Full restart |
+| `sudo systemctl status nginx` | Check whether Nginx is running |
+| `sudo tail -f /var/log/nginx/error.log` | Watch error logs live |
+
+## Key Nginx files
+
+| Path | Purpose |
+|---|---|
+| `/etc/nginx/sites-available/saans` | Site configuration |
+| `/etc/nginx/sites-enabled/` | Active sites (symlinks) |
+| `/var/www/saans` | Website files |
+| `/var/log/nginx/access.log` | Request log |
+| `/var/log/nginx/error.log` | Error log |
+
+## Optional: HTTPS and a fixed IP
+
+- Allocate an **Elastic IP** and attach it to the instance, so the address doesn't change when the instance is stopped and started.
+- Point a domain to the Elastic IP, set `server_name yourdomain.com;` in the Nginx config, then run:
+```bash
+  sudo apt install -y certbot python3-certbot-nginx
+  sudo certbot --nginx -d yourdomain.com
+```
+
+## Troubleshooting
+
+| Problem | Likely cause and fix |
+|---|---|
+| SSH: connection timed out | Your public IP changed. Update the SSH rule's source to **My IP** in the security group |
+| Site not loading | Check that port 80 is open in the security group, and use `http://` not `https://` |
+| 403 Forbidden | `sudo chmod -R 755 /var/www/saans && sudo chown -R www-data:www-data /var/www/saans` |
+| 404 Not Found | `index.html` is not directly inside `/var/www/saans`; check with `ls /var/www/saans` |
+| Map loads but no data | `API_BASE` in `web/app.js` doesn't point to a working API endpoint |
 
 # 🧮 Risk Scoring Model
 
@@ -323,7 +462,7 @@ This allows the system to reproduce conditions from a historical high-burning pe
 ## Backend
 
 - Python 3.12
-- AWS Lambda
+- a Lambda
 - Amazon DynamoDB
 - Amazon S3
 - Amazon EventBridge
@@ -341,20 +480,7 @@ This allows the system to reproduce conditions from a historical high-burning pe
 - Vanilla JavaScript
 - Leaflet.js
 
-## Infrastructure
 
-- AWS Serverless Application Model (SAM)
-
-The backend intentionally avoids heavy dependencies where possible and primarily uses Python standard-library modules such as:
-
-```text
-urllib
-json
-math
-csv
-```
-
----
 
 # 🚀 Run Locally
 
